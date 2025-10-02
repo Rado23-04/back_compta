@@ -1,0 +1,16 @@
+# docker-compose.yml
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=compta_user
+      - POSTGRES_PASSWORD=compta_password
+      - POSTGRES_DB=back-compta
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

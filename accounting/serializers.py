@@ -30,5 +30,5 @@ class JournalEntrySerializer(serializers.ModelSerializer):
         entry = JournalEntry.objects.create(**validated_data)
         for line_data in lines_data:
             account = line_data.pop('account') if 'account' in line_data else None
-            TransactionLine.objects.create(journal_entry=entry, **line_data)
+            TransactionLine.objects.create(journal_entry=entry, account=account,**line_data)
         return entry
