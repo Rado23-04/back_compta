@@ -1,5 +1,6 @@
 
 from django.db import models
+from decimal import Decimal
 
 # Modèle Django pour un compte comptable
 class Account(models.Model):

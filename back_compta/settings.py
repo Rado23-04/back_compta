@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-3$@if-v2z53%n$-^o7yn@(+p-y78kei8mi!-*zsm2!m(0ae@jo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = str(config('ALLOWED_HOSTS', default='127.0.0.1')).split(',')
 
 
 # Application definition
@@ -80,14 +81,21 @@ WSGI_APPLICATION = 'back_compta.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'back_compta', # Nom de la base PostgreSQL
+#         'USER': 'postgres',    # À adapter selon votre config
+#         'PASSWORD': 'radodora',# À adapter selon votre config
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'back_compta', # Nom de la base PostgreSQL
-        'USER': 'postgres',    # À adapter selon votre config
-        'PASSWORD': 'radodora',# À adapter selon votre config
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -129,8 +137,33 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Configuration CORS pour autoriser le front-end React
-CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
-# Exemple pour autoriser seulement localhost:3000
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Port par défaut de Vite
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 # CORS_ALLOWED_ORIGINS = [
 #     'http://localhost:3000',
 #     'http://localhost:5173',

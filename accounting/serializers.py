@@ -6,7 +6,7 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['id', 'numero', 'intitule', 'classe', 'type', 'nature', 'solde_initial']
-
+ 
 # Serializer pour le modèle TransactionLine
 class TransactionLineSerializer(serializers.ModelSerializer):
     account = AccountSerializer(read_only=True)
