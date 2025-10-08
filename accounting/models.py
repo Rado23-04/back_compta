@@ -9,6 +9,7 @@ class Account(models.Model):
 	TYPE_CHOICES = [
 		('Actif', 'Actif'),
 		('Passif', 'Passif'),
+		('Actif/Passif', 'Actif/Passif'),
 		('Charge', 'Charge'),
 		('Produit', 'Produit'),
 		('TVA', 'TVA'),
