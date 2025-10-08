@@ -17,11 +17,13 @@ def account_list(request):
 		serializer = AccountSerializer(accounts, many=True)
 		return Response(serializer.data)
 	elif request.method == 'POST':
-		serializer = AccountSerializer(data=request.data)
-		if serializer.is_valid():
-			serializer.save()
-			return Response(serializer.data, status=status.HTTP_201_CREATED)
-		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+		accounts = request.data
+		for account in accounts:
+			serializer = AccountSerializer(account)
+			if serializer.is_valid():
+				serializer.save()
+				return Response(serializer.data, status=status.HTTP_201_CREATED)
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vue API pour lister et créer des écritures comptables
 @api_view(['GET', 'POST'])
