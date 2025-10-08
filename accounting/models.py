@@ -16,7 +16,7 @@ class Account(models.Model):
 	]
 	type = models.CharField(max_length=20, choices=TYPE_CHOICES)  # Type de compte
 	nature = models.CharField(max_length=100, blank=True, null=True)  # Nature (optionnel)
-	solde_initial = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Solde initial
+	soldeInitial = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Solde initial
 
 	def __str__(self):
 		return f"{self.numero} - {self.intitule}"
@@ -26,7 +26,7 @@ class JournalEntry(models.Model):
 	date = models.DateField()  # Date de l'écriture
 	libelle = models.CharField(max_length=200)  # Libellé de l'opération
 	reference = models.CharField(max_length=100, blank=True, null=True)  # Référence (optionnel)
-	numero_ecriture = models.CharField(max_length=50)  # Numéro d'écriture
+	numeroEcriture = models.CharField(max_length=50)  # Numéro d'écriture
 	nature = models.CharField(max_length=100, blank=True, null=True)  # Nature de l'opération (optionnel)
 	created_at = models.DateTimeField(auto_now_add=True)  # Date de création
 	updated_at = models.DateTimeField(auto_now=True)  # Date de modification
@@ -37,10 +37,13 @@ class JournalEntry(models.Model):
 # Modèle Django pour une ligne de transaction liée à une écriture et un compte
 class TransactionLine(models.Model):
 	journal_entry = models.ForeignKey(JournalEntry, related_name='lines', on_delete=models.CASCADE)  # Lien vers l'écriture
+	compte = models.CharField(max_length=128, blank=True, null=True)  # Compte sous la forme "numero - intitule"
 	account = models.ForeignKey(Account, on_delete=models.PROTECT)  # Lien vers le compte
+	accountNumber = models.CharField(max_length=32, blank=True, null=True)
+	accountName = models.CharField(max_length=128, blank=True, null=True)
 	debit = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # Montant débit
 	credit = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # Montant crédit
-	calculated_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Montant calculé
+	calculatedAmount = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Montant calculé
 	percentage = models.FloatField(default=0)  # Pourcentage
 	nature = models.CharField(max_length=100, blank=True, null=True)  # Nature (optionnel)
 
