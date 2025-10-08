@@ -17,7 +17,10 @@ def account_list(request):
 		serializer = AccountSerializer(accounts, many=True)
 		return Response(serializer.data)
 	elif request.method == 'POST':
-		serializer = AccountSerializer(data=request.data)
+		# Accept either a single account object or a list of accounts
+		data = request.data
+		many = isinstance(data, list)
+		serializer = AccountSerializer(data=data, many=many)
 		if serializer.is_valid():
 			serializer.save()
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -31,7 +34,8 @@ def entry_list(request):
 	POST : Crée une nouvelle écriture avec ses lignes
 	"""
 	if request.method == 'GET':
-		entries = JournalEntry.objects.all()
+		# Précharger les lignes et les comptes liés pour éviter les requêtes N+1
+		entries = JournalEntry.objects.all().prefetch_related('lines__account')
 		serializer = JournalEntrySerializer(entries, many=True)
 		return Response(serializer.data)
 	elif request.method == 'POST':
