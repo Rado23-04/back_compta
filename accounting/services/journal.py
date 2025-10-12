@@ -45,6 +45,7 @@ def create_journal_entry(validated_data):
             tl = TransactionLine(
                 journal_entry=entry,
                 account=account,
+                compte=compte,
                 accountNumber=account_num,
                 accountName=account_name,
                 debit=line.get('debit') or 0,
