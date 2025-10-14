@@ -38,7 +38,6 @@ class JournalEntry(models.Model):
 # Modèle Django pour une ligne de transaction liée à une écriture et un compte
 class TransactionLine(models.Model):
 	journal_entry = models.ForeignKey(JournalEntry, related_name='lines', on_delete=models.CASCADE)  # Lien vers l'écriture
-	compte = models.CharField(max_length=128, blank=True, null=True)  # Compte sous la forme "numero - intitule"
 	account = models.ForeignKey(Account, on_delete=models.PROTECT)  # Lien vers le compte
 	accountNumber = models.CharField(max_length=32, blank=True, null=True)
 	accountName = models.CharField(max_length=128, blank=True, null=True)

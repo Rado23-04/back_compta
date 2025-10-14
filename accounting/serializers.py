@@ -1,6 +1,8 @@
+
 from rest_framework import serializers
 from .models import Account, JournalEntry, TransactionLine
-from .services.journal import create_journal_entry
+from .services.journalEntryServices import create_journal_entry, update_journal_entry
+
 
 # Serializer pour le modèle Account
 class AccountSerializer(serializers.ModelSerializer):
@@ -12,7 +14,7 @@ class AccountSerializer(serializers.ModelSerializer):
 class TransactionLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionLine
-        fields = ['id', 'compte', 'accountNumber', 'accountName', 'debit', 'credit', 'calculatedAmount', 'percentage', 'nature']
+        fields = ['id', 'accountNumber', 'accountName', 'debit', 'credit', 'calculatedAmount', 'percentage', 'nature']
 
 # Serializer pour le modèle JournalEntry, incluant les lignes de transaction
 class JournalEntrySerializer(serializers.ModelSerializer):
@@ -23,5 +25,9 @@ class JournalEntrySerializer(serializers.ModelSerializer):
         fields = ['id', 'date', 'libelle', 'reference', 'numeroEcriture', 'nature', 'created_at', 'updated_at', 'lines']
 
     def create(self, validated_data):
-        # Création d'une écriture avec ses lignes
+
         return create_journal_entry(validated_data)
+
+    def update(self, instance, validated_data):
+        
+        return update_journal_entry(instance, validated_data)
