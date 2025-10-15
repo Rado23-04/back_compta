@@ -16,15 +16,18 @@ def parse_compte(compte):
 # Utility function to parse incoming data for JournalEntry and its lines
 def parse_data(data):
 
-    comptes = []
+    accounts = []
 
     for line in data["lines"]:
-        comptes.append(line.pop('compte'))
+        accounts.append(line.pop('account'))
     
-    for compte, line in zip(comptes, data["lines"]):
-        numero, intitule = parse_compte(compte)
-        line['accountNumber'] = numero
-        line['accountName'] = intitule
+    for account, line in zip(accounts, data["lines"]):
+        try:
+            account = Account.objects.get(pk=account)
+            line['accountNumber'] = account.numero
+            line['accountName'] = account.intitule
+        except Account.DoesNotExist:
+            raise serializers.ValidationError({'transactions': f'Le compte numero {account.numero}, intitulé {account.intitule} not found'})
 
     return data
 
@@ -37,14 +40,3 @@ def check_balance(lines):
         return False
 
     return True
-
-# Utility function to validate and retrieve an Account instance
-def check_get_account(account_num, account_name, idx):
-
-    try:
-        account = Account.objects.get(numero=account_num)
-
-    except Account.DoesNotExist:
-        raise serializers.ValidationError({'transactions': {idx: f'Le compte numero {account_num}, intitulé {account_name} not found'}})
-
-    return account

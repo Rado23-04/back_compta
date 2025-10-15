@@ -1,8 +1,8 @@
 
 from django.db import transaction
 from rest_framework import serializers
-from ..models import JournalEntry, TransactionLine
-from ..utils import check_balance, check_get_account
+from ..models import Account, JournalEntry, TransactionLine
+from ..utils import check_balance
 
 def create_journal_entry(validated_data):
 
@@ -22,12 +22,7 @@ def create_journal_entry(validated_data):
 
         for idx, line in enumerate(lines):
 
-            try:
-
-                account = check_get_account(line["accountNumber"], line["accountName"], idx)
-            
-            except Exception as e:
-                raise serializers.ValidationError({'transaction': {idx: str(e)}})
+            account = Account.objects.get(numero=line["accountNumber"])
 
             tLine = TransactionLine(
                 journal_entry=journal_entry,
@@ -69,12 +64,7 @@ def update_journal_entry(instance, validated_data):
         
         for idx, line in enumerate(lines):
 
-            try:
-
-                account = check_get_account(line["accountNumber"], line["accountName"], idx)
-            
-            except Exception as e:
-                raise serializers.ValidationError({'transaction': {idx: str(e)}})
+            account = Account.objects.get(numero=line["accountNumber"])
 
             tLine = TransactionLine(
                 journal_entry=instance,
