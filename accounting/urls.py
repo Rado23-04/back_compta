@@ -3,7 +3,8 @@ from . import views
 
 # URL pour lister et créer des comptes
 urlpatterns = [
-    path('accounts/', views.account_list, name='account-list'),  # /api/accounts/
-    path('entries/', views.entry_list, name='entry-list'),      # /api/entries/
-    path('entries/<int:pk>/', views.entry_list, name='entry-detail'),  # /api/accounts/1/
+    path('accounts/', views.account_list, name='account-list'),
+    path('accounts/<int:pk>/', views.account_list, name='account-detail'),
+    path('entries/', views.entry_list, name='entry-list'),
+    path('entries/<int:pk>/', views.entry_list, name='entry-detail'),
 ]
