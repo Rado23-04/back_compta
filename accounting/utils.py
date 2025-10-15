@@ -27,7 +27,7 @@ def parse_data(data):
             line['accountNumber'] = account.numero
             line['accountName'] = account.intitule
         except Account.DoesNotExist:
-            raise serializers.ValidationError({'transactions': f'Le compte numero {account.numero}, intitulé {account.intitule} not found'})
+            raise serializers.ValidationError({'transactions': f'Le compte est introuvable'})
 
     return data
 
@@ -40,3 +40,21 @@ def check_balance(lines):
         return False
 
     return True
+
+# Utility function to update an account's soldeInitial based on debit and credit amounts
+"""
+def update_account_solde(account_id, debit, credit):
+
+    try:
+        account = Account.objects.get(id=account_id)
+    except Account.DoesNotExist:
+        raise serializers.ValidationError({'transactions': f'Le compte est introuvable'})
+
+    if debit < 0 or credit < 0:
+        raise serializers.ValidationError({'transactions': f'Les montants débit et crédit doivent être positifs'})
+
+    account.soldeInitial += (debit - credit)
+    account.save()
+
+    return account
+"""
