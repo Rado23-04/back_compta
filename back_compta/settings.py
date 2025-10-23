@@ -83,9 +83,9 @@ WSGI_APPLICATION = 'back_compta.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'compta', # Nom de la base PostgreSQL
-        'USER': 'compta_user',    # À adapter selon votre config
-        'PASSWORD': 'compta_password',# À adapter selon votre config
+        'NAME': 'accounting', # Nom de la base PostgreSQL
+        'USER': 'postgres',    # À adapter selon votre config
+        'PASSWORD': 'kiady147',# À adapter selon votre config
         'HOST': 'localhost',
         'PORT': '5432',
     }
