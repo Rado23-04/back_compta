@@ -2,7 +2,7 @@
 from django.db import transaction
 from rest_framework import serializers
 from ..models import Account, JournalEntry, TransactionLine
-from ..utils import check_balance
+from ..utils import check_balance#, update_account_solde
 
 def create_journal_entry(validated_data):
 
@@ -37,6 +37,8 @@ def create_journal_entry(validated_data):
             )
 
             tListObject.append(tLine)
+
+            #update_account_solde(account.id, tLine.debit, tLine.credit)
 
         TransactionLine.objects.bulk_create(tListObject)
 
