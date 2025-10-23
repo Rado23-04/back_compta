@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+load_dotenv()
+GEMINI_API_KEY="AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo"
+GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +30,7 @@ SECRET_KEY = 'django-insecure-3$@if-v2z53%n$-^o7yn@(+p-y78kei8mi!-*zsm2!m(0ae@jo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     # App comptable personnalisée
     'accounting',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -84,10 +90,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'compta', # Nom de la base PostgreSQL
-        'USER': 'compta_user',    # À adapter selon votre config
-        'PASSWORD': 'compta_password',# À adapter selon votre config
+        'USER': 'postgres',    # À adapter selon votre config
+        'PASSWORD': 'ralaivelo03',# À adapter selon votre config
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '5433',
     }
 }
 
@@ -140,3 +146,4 @@ CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+GOOGLE_API_KEY = 'AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo'
