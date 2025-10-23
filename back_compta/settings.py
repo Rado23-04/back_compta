@@ -11,11 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import os
-from dotenv import load_dotenv
-load_dotenv()
+#import os
+#from dotenv import load_dotenv
+#load_dotenv()
 GEMINI_API_KEY="AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo"
-GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
+#GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -146,4 +146,4 @@ CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-GOOGLE_API_KEY = 'AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo'
+#GOOGLE_API_KEY = 'AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo'
