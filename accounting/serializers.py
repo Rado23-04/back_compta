@@ -10,12 +10,6 @@ class AccountSerializer(serializers.ModelSerializer):
         model = Account
         fields = ['id', 'numero', 'intitule', 'classe', 'type', 'nature', 'soldeInitial']
 
-# Serializer minimal pour permettre uniquement la mise à jour de `soldeInitial`
-class AccountSoldeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Account
-        fields = ['soldeInitial']
-
 # Serializer pour le modèle TransactionLine
 class TransactionLineSerializer(serializers.ModelSerializer):
     class Meta:

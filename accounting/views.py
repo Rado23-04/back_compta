@@ -5,10 +5,10 @@ from rest_framework import status
 
 from .utils import parse_data
 from .models import Account, JournalEntry
-from .serializers import AccountSerializer, JournalEntrySerializer, AccountSoldeSerializer
+from .serializers import AccountSerializer, JournalEntrySerializer
 
 # Vue API pour lister et créer des comptes
-@api_view(['GET', 'POST', 'PUT'])
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
 def account_list(request, pk=None):
 	"""
 	GET : Liste tous les comptes
@@ -35,13 +35,24 @@ def account_list(request, pk=None):
 			account = Account.objects.get(pk=pk)
 		except Account.DoesNotExist:
 			return Response({"Account": "Compte non trouvé."}, status=status.HTTP_404_NOT_FOUND)
-
-		serializer = AccountSoldeSerializer(account, data=request.data, partial=True)
+		
+		serializer = AccountSerializer(account, data=request.data)
+		
 		if serializer.is_valid():
 			serializer.save()
-			full = AccountSerializer(account)
-			return Response(full.data, status=status.HTTP_200_OK)
+			return Response(serializer.data, status=status.HTTP_200_OK)
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+	elif request.method == 'DELETE':
+		if not pk:
+			return Response({"PK": "L'ID du compte est requis pour la suppression."}, status=status.HTTP_400_BAD_REQUEST)
+		try:
+			account = Account.objects.get(pk=pk)
+		except Account.DoesNotExist:
+			return Response({"Account": "Compte non trouvé."}, status=status.HTTP_404_NOT_FOUND)
+		
+		account.delete()
+		return Response({"Account":"Compte effacé"} ,status=status.HTTP_200_OK)
 
 # Vue API pour lister et créer des écritures comptables
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
@@ -56,8 +67,12 @@ def entry_list(request, pk=None):
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 	elif request.method == 'POST':
-		data = parse_data(request.data)
-		serializer = JournalEntrySerializer(data=data)
+		many = isinstance(data, list)
+		if many:
+			data = [parse_data(item) for item in request.data]
+		else:
+			data = parse_data(request.data)
+		serializer = JournalEntrySerializer(data=data, many=many)
 		if serializer.is_valid():
 			serializer.save()
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
