@@ -67,7 +67,7 @@ def entry_list(request, pk=None):
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 	elif request.method == 'POST':
-		many = isinstance(data, list)
+		many = isinstance(request.data, list)
 		if many:
 			data = [parse_data(item) for item in request.data]
 		else:
