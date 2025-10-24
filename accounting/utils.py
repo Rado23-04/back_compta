@@ -58,3 +58,18 @@ def update_account_solde(account_id, debit, credit):
 
     return account
 """
+
+def separate_dataframes(df, group_column):
+    """Separate DataFrame into individual DataFrames for each group value"""
+    grouped = df.groupby(group_column)
+    separated_dfs = {}
+    
+    for value, group_df in grouped:
+        # Create variable name
+        var_name = f"df_{value}"
+        separated_dfs[var_name] = group_df.reset_index(drop=True)
+        
+        # Also create actual variables (use with caution)
+        globals()[var_name] = group_df.reset_index(drop=True)
+    
+    return separated_dfs

@@ -5,7 +5,11 @@ from rest_framework import status
 
 from .utils import parse_data
 from .models import Account, JournalEntry
-from .serializers import AccountSerializer, JournalEntrySerializer
+from .serializers import AccountSerializer, ImportSerializer, JournalEntrySerializer
+
+import pandas as pd
+
+from .services.importServices import excel_to_database
 
 # Vue API pour lister et créer des comptes
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
@@ -67,7 +71,7 @@ def entry_list(request, pk=None):
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 	elif request.method == 'POST':
-		many = isinstance(data, list)
+		many = isinstance(request.data, list)
 		if many:
 			data = [parse_data(item) for item in request.data]
 		else:
@@ -108,3 +112,16 @@ def entry_list(request, pk=None):
 		entry.delete()
 
 		return Response({"Journal":"Ecriture effacé"} ,status=status.HTTP_200_OK)
+	
+@api_view(['POST'])
+def importing(request):
+	"""
+	POST : Importe un fichier excel pour créer des écritures comptables
+	"""
+	serializer = ImportSerializer(data=request.data)
+	if serializer.is_valid():
+		excel_file = serializer.validated_data['file']
+		df = pd.read_excel(excel_file)
+		excel_to_database(df)
+		return Response({"Import": "Fichier traité avec succès."}, status=status.HTTP_200_OK)
+	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

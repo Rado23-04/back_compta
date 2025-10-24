@@ -31,3 +31,11 @@ class JournalEntrySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         
         return update_journal_entry(instance, validated_data)
+    
+class ImportSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+    def validate_file(self, value):
+        if not value.name.endswith(('.xls', '.xlsx', 'csv')):
+            raise serializers.ValidationError("Le fichier doit être au format Excel (.xls ou .xlsx ou .csv).")
+        return value
