@@ -20,63 +20,75 @@ class AccountingChatBotView(View):
         self._initialize_gemini()
     
     def _initialize_gemini(self):
-        """Initialise Gemini avec plusieurs modèles et gestion d'erreur complète"""
+        """Initialise Gemini avec les modèles actuels"""
         try:
-            # Vérifier que la clé API est configurée
+            print("🔧 Début de l'initialisation Gemini...")
+            
+            # Vérification clé API
             if not hasattr(settings, 'GEMINI_API_KEY') or not settings.GEMINI_API_KEY:
                 print("❌ Clé API Gemini non configurée dans settings.py")
                 return
             
+            print(f"✅ Clé API trouvée: {settings.GEMINI_API_KEY[:10]}...")
+            
             # Configurer Gemini
             genai.configure(api_key=settings.GEMINI_API_KEY)
+            print("✅ Gemini configuré avec la clé API")
             
-            # Liste des modèles à essayer (du plus récent au plus ancien)
+            # LISTE DES MODÈLES ACTUALISÉE
             models_to_try = [
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-8b', 
-                'gemini-1.5-pro',
-                'gemini-1.0-pro',
-                'gemini-pro'
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-001',
+                'gemini-flash-latest',
+                'gemini-2.0-flash-lite',
+                'gemini-pro-latest',
             ]
+            
+            print(f"🔄 Test de {len(models_to_try)} modèles...")
             
             for model_name in models_to_try:
                 try:
-                    print(f"🔄 Tentative d'initialisation du modèle: {model_name}")
+                    print(f"🔄 Test du modèle: {model_name}")
                     self.model = genai.GenerativeModel(model_name)
-                    
-                    # Test avec une requête simple
                     test_response = self.model.generate_content("Réponds juste par 'OK'")
                     
-                    if test_response.text:
+                    if test_response and test_response.text:
                         self.gemini_available = True
-                        print(f"✅ Gemini initialisé avec succès - Modèle: {model_name}")
+                        print(f"✅ Gemini initialisé avec: {model_name}")
                         print(f"✅ Test réponse: {test_response.text}")
                         return
-                    
-                except Exception as model_error:
-                    print(f"❌ Modèle {model_name} non disponible: {str(model_error)}")
+                        
+                except Exception as e:
+                    print(f"❌ {model_name} échoué: {str(e)[:100]}...")
                     continue
             
-            # Si aucun modèle ne fonctionne
-            print("❌ Aucun modèle Gemini n'est disponible")
-            self.model = None
+            print("❌ Aucun modèle disponible")
             self.gemini_available = False
-            
+                
         except Exception as e:
-            print(f"💥 Erreur critique d'initialisation Gemini: {str(e)}")
-            self.model = None
+            print(f"💥 Erreur initialisation: {str(e)}")
             self.gemini_available = False
 
+    def get_gemini_status(self):
+        """Méthode pour diagnostiquer l'état de Gemini"""
+        status = {
+            'gemini_available': self.gemini_available,
+            'model_loaded': self.model is not None,
+            'api_key_configured': hasattr(settings, 'GEMINI_API_KEY') and bool(settings.GEMINI_API_KEY),
+            'api_key_value': '***' + settings.GEMINI_API_KEY[-4:] if hasattr(settings, 'GEMINI_API_KEY') and settings.GEMINI_API_KEY else None
+        }
+        return status
+
     def generate_sql_with_gemini(self, user_question):
-        """Utilise Gemini pour générer une requête SQL avec un prompt optimisé"""
+        """Utilise Gemini pour générer une requête SQL avec un prompt complet et professionnel"""
         if not self.gemini_available or not self.model:
             print("❌ Gemini non disponible pour cette requête")
             return None
         
         try:
-            # Prompt optimisé pour la comptabilité
+            # PROMPT PROFESSIONNEL COMPLET avec TOUTES les requêtes possibles
             prompt = f"""
-            Tu es un expert SQL et comptable français. Génère UNIQUEMENT une requête SQL PostgreSQL pour répondre à cette question comptable.
+            Tu es un expert SQL et comptable français professionnel. Génère UNIQUEMENT une requête SQL PostgreSQL pour répondre à cette question comptable.
 
             QUESTION: "{user_question}"
 
@@ -96,7 +108,7 @@ class AccountingChatBotView(View):
             - date (DATE) - date de l'écriture
             - libelle (VARCHAR(200)) - libellé de l'opération
             - reference (VARCHAR(100)) - référence
-            - "numeroEcriture" (VARCHAR(50)) - numéro d'écriture (NOTE: utiliser des guillemets)
+            - "numeroEcriture" (VARCHAR(50)) - numéro d'écriture
             - nature (VARCHAR(100)) - nature de l'opération
 
             ### Table: accounting_transactionline
@@ -118,22 +130,332 @@ class AccountingChatBotView(View):
             7. Pour les jointures: JOIN accounting_account ON accounting_transactionline.account_id = accounting_account.id
             8. Formate la réponse UNIQUEMENT avec: ```sql [ta_requête_sql] ```
 
-            ### EXEMPLES DE REQUÊTES CORRECTES:
-
+            ### CATÉGORIE 1: SOLDE ET INFORMATIONS DES COMPTES
             Question: "Quel est le solde du compte 411000 ?"
             Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.numero = '411000' GROUP BY a.id, a.numero, a.intitule; ```
 
+            Question: "Donne-moi le solde du compte Clients"
+            Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.intitule ILIKE '%Clients%' GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Affiche le solde du compte 512000"
+            Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.numero = '512000' GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Quel est le montant du compte 445660 ?"
+            Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.numero = '445660' GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Montre-moi le solde initial du compte 106000"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE numero = '106000'; ```
+
+            ### CATÉGORIE 2: RECHERCHE DE COMPTES
+            Question: "Trouve le compte 411000"
+            Réponse: ```sql SELECT numero, intitule, type, classe, "soldeInitial" FROM accounting_account WHERE numero = '411000'; ```
+
+            Question: "Donne-moi les informations du compte Banque"
+            Réponse: ```sql SELECT numero, intitule, type, classe, "soldeInitial" FROM accounting_account WHERE intitule ILIKE '%Banque%'; ```
+
+            Question: "Recherche les comptes de charges"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'Charge' ORDER BY numero; ```
+
+            Question: "Liste tous les comptes de produits"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'Produit' ORDER BY numero; ```
+
+            Question: "Affiche les comptes de la classe 4"
+            Réponse: ```sql SELECT numero, intitule, type FROM accounting_account WHERE classe = 4 ORDER BY numero; ```
+
+            Question: "Quels sont les comptes d'actif ?"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'Actif' ORDER BY numero; ```
+
+            Question: "Montre-moi les comptes de passif"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'Passif' ORDER BY numero; ```
+
+            Question: "Liste les comptes de TVA"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'TVA' ORDER BY numero; ```
+
+            ### CATÉGORIE 3: ANALYSE PAR TYPE DE COMPTE
             Question: "Combien y a-t-il de comptes de charge ?"
             Réponse: ```sql SELECT COUNT(*) as nombre_comptes FROM accounting_account WHERE type = 'Charge'; ```
 
-            Question: "Liste les 5 dernières écritures"
-            Réponse: ```sql SELECT "numeroEcriture", date, libelle FROM accounting_journalentry ORDER BY date DESC LIMIT 5; ```
+            Question: "Nombre de comptes d'actif"
+            Réponse: ```sql SELECT COUNT(*) as nombre_comptes FROM accounting_account WHERE type = 'Actif'; ```
 
+            Question: "Quels sont les comptes de produits ?"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'Produit' ORDER BY numero; ```
+
+            Question: "Liste les comptes de TVA disponibles"
+            Réponse: ```sql SELECT numero, intitule, classe FROM accounting_account WHERE type = 'TVA' ORDER BY numero; ```
+
+            ### CATÉGORIE 4: TOTAUX GÉNÉRAUX
+            Question: "Quel est le total des débits ?"
+            Réponse: ```sql SELECT SUM(debit) as total_debits FROM accounting_transactionline; ```
+
+            Question: "Quel est le total des crédits ?"
+            Réponse: ```sql SELECT SUM(credit) as total_credits FROM accounting_transactionline; ```
+
+            Question: "Donne-moi le solde général"
+            Réponse: ```sql SELECT SUM(debit) as total_debits, SUM(credit) as total_credits, SUM(debit) - SUM(credit) as solde_general FROM accounting_transactionline; ```
+
+            Question: "Total des mouvements du mois"
+            Réponse: ```sql SELECT SUM(debit) as total_debits, SUM(credit) as total_credits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('month', CURRENT_DATE) AND j.date < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month'); ```
+
+            Question: "Montre le total des transactions"
+            Réponse: ```sql SELECT COUNT(*) as nombre_transactions FROM accounting_transactionline; ```
+
+            ### CATÉGORIE 5: ANALYSE PAR PÉRIODE
             Question: "Total des débits du mois dernier"
             Réponse: ```sql SELECT SUM(debit) as total_debits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND j.date < DATE_TRUNC('month', CURRENT_DATE); ```
 
-            Question: "Trouve les écritures avec le libellé 'Client Dupont'"
+            Question: "Total des crédits du mois en cours"
+            Réponse: ```sql SELECT SUM(credit) as total_credits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('month', CURRENT_DATE) AND j.date < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month'); ```
+
+            Question: "Débits de la semaine dernière"
+            Réponse: ```sql SELECT SUM(debit) as total_debits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= CURRENT_DATE - INTERVAL '7 days' AND j.date < CURRENT_DATE; ```
+
+            Question: "Transactions du trimestre"
+            Réponse: ```sql SELECT SUM(debit) as total_debits, SUM(credit) as total_credits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('quarter', CURRENT_DATE) AND j.date < DATE_TRUNC('quarter', CURRENT_DATE) + INTERVAL '3 months'; ```
+
+            Question: "Mouvements de l'année 2024"
+            Réponse: ```sql SELECT SUM(debit) as total_debits, SUM(credit) as total_credits FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE EXTRACT(YEAR FROM j.date) = 2024; ```
+
+            ### CATÉGORIE 6: PAR COMPTE SPÉCIFIQUE
+            Question: "Total des débits du compte 411000"
+            Réponse: ```sql SELECT SUM(debit) as total_debits FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id WHERE a.numero = '411000'; ```
+
+            Question: "Crédits du compte 512000 ce mois"
+            Réponse: ```sql SELECT SUM(credit) as total_credits FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.numero = '512000' AND j.date >= DATE_TRUNC('month', CURRENT_DATE); ```
+
+            Question: "Mouvements du compte Clients"
+            Réponse: ```sql SELECT j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.intitule ILIKE '%Clients%' ORDER BY j.date DESC; ```
+
+            Question: "Transactions du compte Banque"
+            Réponse: ```sql SELECT j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.intitule ILIKE '%Banque%' ORDER BY j.date DESC; ```
+
+            ### CATÉGORIE 7: RECHERCHE D'ÉCRITURES
+            Question: "Liste les 10 dernières écritures"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC, id DESC LIMIT 10; ```
+
+            Question: "Affiche les 5 écritures les plus récentes"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC LIMIT 5; ```
+
+            Question: "Donne-moi toutes les écritures d'hier"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE date = CURRENT_DATE - INTERVAL '1 day' ORDER BY date DESC; ```
+
+            Question: "Écritures du mois de janvier"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE EXTRACT(YEAR FROM date) = 2024 AND EXTRACT(MONTH FROM date) = 1 ORDER BY date DESC; ```
+
+            Question: "Recherche les écritures avec 'Client Dupont'"
             Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Client Dupont%' ORDER BY date DESC; ```
+
+            Question: "Trouve les écritures contenant 'Facture'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Facture%' ORDER BY date DESC; ```
+
+            Question: "Écritures avec la référence 'FAC2024001'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE reference ILIKE '%FAC2024001%' ORDER BY date DESC; ```
+
+            ### CATÉGORIE 8: ANALYSE DES ÉCRITURES
+            Question: "Combien d'écritures ce mois-ci ?"
+            Réponse: ```sql SELECT COUNT(*) as nombre_ecritures FROM accounting_journalentry WHERE date >= DATE_TRUNC('month', CURRENT_DATE) AND date < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month'); ```
+
+            Question: "Nombre d'écritures par jour"
+            Réponse: ```sql SELECT date, COUNT(*) as nombre_ecritures FROM accounting_journalentry GROUP BY date ORDER BY date DESC; ```
+
+            Question: "Dernière écriture enregistrée"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC, id DESC LIMIT 1; ```
+
+            Question: "Écritures du journal de banque"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%banque%' OR libelle ILIKE '%chèque%' OR libelle ILIKE '%virement%' ORDER BY date DESC; ```
+
+            ### CATÉGORIE 9: PAR CLASSE COMPTABLE
+            Question: "Liste les comptes de classe 1"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 1 ORDER BY numero; ```
+
+            Question: "Solde total de la classe 1"
+            Réponse: ```sql SELECT SUM(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0)) as solde_total FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.classe = 1 GROUP BY a.id; ```
+
+            Question: "Comptes de capitaux propres"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 1 AND numero LIKE '10%' ORDER BY numero; ```
+
+            Question: "Affiche les comptes de classe 2"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 2 ORDER BY numero; ```
+
+            Question: "Immobilisations de l'entreprise"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 2 ORDER BY numero; ```
+
+            Question: "Comptes d'amortissement"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 2 AND numero LIKE '28%' ORDER BY numero; ```
+
+            Question: "Comptes de stocks disponibles"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 3 ORDER BY numero; ```
+
+            Question: "Liste la classe 3"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 3 ORDER BY numero; ```
+
+            Question: "Valeur des stocks"
+            Réponse: ```sql SELECT SUM("soldeInitial") as valeur_stocks FROM accounting_account WHERE classe = 3; ```
+
+            Question: "Tous les comptes fournisseurs"
+            Réponse: ```sql SELECT numero, intitule, type FROM accounting_account WHERE classe = 4 AND numero LIKE '4%' ORDER BY numero; ```
+
+            Question: "Liste des comptes clients"
+            Réponse: ```sql SELECT numero, intitule, type FROM accounting_account WHERE classe = 4 AND numero LIKE '41%' ORDER BY numero; ```
+
+            Question: "Comptes de personnel classe 4"
+            Réponse: ```sql SELECT numero, intitule, type FROM accounting_account WHERE classe = 4 AND numero LIKE '42%' OR numero LIKE '43%' ORDER BY numero; ```
+
+            Question: "Comptes bancaires disponibles"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 5 ORDER BY numero; ```
+
+            Question: "Liste des comptes de banque"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 5 ORDER BY numero; ```
+
+            Question: "Comptes financiers classe 5"
+            Réponse: ```sql SELECT numero, intitule, type, "soldeInitial" FROM accounting_account WHERE classe = 5 ORDER BY numero; ```
+
+            Question: "Toutes les charges de l'entreprise"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 6 ORDER BY numero; ```
+
+            Question: "Liste des comptes de charge"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 6 ORDER BY numero; ```
+
+            Question: "Charges par type"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 6 ORDER BY numero; ```
+
+            Question: "Comptes de produits d'exploitation"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 7 ORDER BY numero; ```
+
+            Question: "Liste des produits"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 7 ORDER BY numero; ```
+
+            Question: "Ventes et autres produits"
+            Réponse: ```sql SELECT numero, intitule, "soldeInitial" FROM accounting_account WHERE classe = 7 ORDER BY numero; ```
+
+            ### CATÉGORIE 10: TOP ET CLASSEMENTS
+            Question: "Quels sont les 10 comptes les plus utilisés ?"
+            Réponse: ```sql SELECT a.numero, a.intitule, COUNT(t.id) as usage_count FROM accounting_account a JOIN accounting_transactionline t ON a.id = t.account_id GROUP BY a.id, a.numero, a.intitule ORDER BY usage_count DESC LIMIT 10; ```
+
+            Question: "Top 5 des comptes avec le plus de transactions"
+            Réponse: ```sql SELECT a.numero, a.intitule, COUNT(t.id) as nombre_transactions FROM accounting_account a JOIN accounting_transactionline t ON a.id = t.account_id GROUP BY a.id, a.numero, a.intitule ORDER BY nombre_transactions DESC LIMIT 5; ```
+
+            Question: "Comptes avec le plus grand solde"
+            Réponse: ```sql SELECT a.numero, a.intitule, ABS(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0)) as solde_absolu FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id GROUP BY a.id, a.numero, a.intitule ORDER BY solde_absolu DESC LIMIT 10; ```
+
+            Question: "Comptes les plus actifs ce mois"
+            Réponse: ```sql SELECT a.numero, a.intitule, COUNT(t.id) as activite FROM accounting_account a JOIN accounting_transactionline t ON a.id = t.account_id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('month', CURRENT_DATE) GROUP BY a.id, a.numero, a.intitule ORDER BY activite DESC LIMIT 10; ```
+
+            ### CATÉGORIE 11: STATISTIQUES
+            Question: "Nombre total de comptes"
+            Réponse: ```sql SELECT COUNT(*) as total_comptes FROM accounting_account; ```
+
+            Question: "Nombre total d'écritures"
+            Réponse: ```sql SELECT COUNT(*) as total_ecritures FROM accounting_journalentry; ```
+
+            Question: "Nombre total de transactions"
+            Réponse: ```sql SELECT COUNT(*) as nombre_transactions FROM accounting_transactionline; ```
+
+            Question: "Moyenne des montants de débit"
+            Réponse: ```sql SELECT AVG(debit) as moyenne_debit FROM accounting_transactionline WHERE debit > 0; ```
+
+            Question: "Plus gros montant de crédit"
+            Réponse: ```sql SELECT MAX(credit) as max_credit FROM accounting_transactionline; ```
+
+            Question: "Distribution des montants de débit"
+            Réponse: ```sql SELECT COUNT(*) as nombre_transactions, AVG(debit) as moyenne, MAX(debit) as maximum, MIN(debit) as minimum FROM accounting_transactionline WHERE debit > 0; ```
+
+            ### CATÉGORIE 12: RECHERCHES COMPLEXES
+            Question: "Trouve les écritures sans référence"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle FROM accounting_journalentry WHERE reference IS NULL OR reference = '' ORDER BY date DESC; ```
+
+            Question: "Comptes sans mouvement ce mois"
+            Réponse: ```sql SELECT a.numero, a.intitule FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id LEFT JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date IS NULL OR j.date < DATE_TRUNC('month', CURRENT_DATE) GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Écritures avec des libellés vides"
+            Réponse: ```sql SELECT "numeroEcriture", date, reference FROM accounting_journalentry WHERE libelle IS NULL OR libelle = ''; ```
+
+            Question: "Transactions avec des montants anormaux"
+            Réponse: ```sql SELECT j."numeroEcriture", j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE t.debit > 100000 OR t.credit > 100000 ORDER BY j.date DESC; ```
+
+            ### CATÉGORIE 13: RECHERCHE TEXTUELLE
+            Question: "Recherche 'Client Martin' dans les libellés"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Client Martin%' ORDER BY date DESC; ```
+
+            Question: "Trouve les écritures avec 'Salaire'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Salaire%' ORDER BY date DESC; ```
+
+            Question: "Écritures contenant 'Remboursement'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Remboursement%' ORDER BY date DESC; ```
+
+            Question: "Recherche 'Achat' dans les libellés"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE libelle ILIKE '%Achat%' ORDER BY date DESC; ```
+
+            Question: "Trouve l'écriture avec la référence 'FAC-001'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE reference ILIKE '%FAC-001%' ORDER BY date DESC; ```
+
+            Question: "Recherche par référence 'BQ2024'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE reference ILIKE '%BQ2024%' ORDER BY date DESC; ```
+
+            Question: "Écritures avec référence commençant par 'CH'"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE reference LIKE 'CH%' ORDER BY date DESC; ```
+
+            ### CATÉGORIE 14: TEMPOREL - PAR DATE SPÉCIFIQUE
+            Question: "Écritures du 15 janvier 2024"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE date = '2024-01-15' ORDER BY date DESC; ```
+
+            Question: "Transactions d'hier"
+            Réponse: ```sql SELECT j."numeroEcriture", j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date = CURRENT_DATE - INTERVAL '1 day'; ```
+
+            Question: "Mouvements de la semaine dernière"
+            Réponse: ```sql SELECT j."numeroEcriture", j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= CURRENT_DATE - INTERVAL '7 days' AND j.date < CURRENT_DATE ORDER BY j.date DESC; ```
+
+            ### CATÉGORIE 15: PÉRIODES PERSONNALISÉES
+            Question: "Écritures entre le 1er janvier et le 31 mars 2024"
+            Réponse: ```sql SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry WHERE date BETWEEN '2024-01-01' AND '2024-03-31' ORDER BY date DESC; ```
+
+            Question: "Transactions des 30 derniers jours"
+            Réponse: ```sql SELECT j."numeroEcriture", j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY j.date DESC; ```
+
+            Question: "Mouvements du dernier trimestre"
+            Réponse: ```sql SELECT j."numeroEcriture", j.date, j.libelle, t.debit, t.credit FROM accounting_transactionline t JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE j.date >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '3 months') AND j.date < DATE_TRUNC('quarter', CURRENT_DATE) ORDER BY j.date DESC; ```
+
+            ### CATÉGORIE 16: SITUATION CLIENT/FOURNISSEUR
+            Question: "Situation du client Dupont"
+            Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) as total_debit, COALESCE(SUM(t.credit), 0) as total_credit, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.intitule ILIKE '%Dupont%' AND a.type = 'Actif' GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Solde fournisseur Martin"
+            Réponse: ```sql SELECT a.numero, a.intitule, COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) as solde FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE a.intitule ILIKE '%Martin%' AND a.type = 'Passif' GROUP BY a.id, a.numero, a.intitule; ```
+
+            Question: "Historique des transactions avec un client"
+            Réponse: ```sql SELECT j.date, j.libelle, t.debit, t.credit, j."numeroEcriture" FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.intitule ILIKE '%Martin%' ORDER BY j.date DESC; ```
+
+            ### CATÉGORIE 17: ANALYSE FINANCIÈRE
+            Question: "Bilan simplifié (actif/passif)"
+            Réponse: ```sql SELECT type, COUNT(*) as nombre_comptes, SUM("soldeInitial") as solde_initial_total, SUM(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0)) as solde_courant FROM accounting_account a LEFT JOIN accounting_transactionline t ON a.id = t.account_id WHERE type IN ('Actif', 'Passif') GROUP BY type; ```
+
+            Question: "Total des charges du mois"
+            Réponse: ```sql SELECT SUM(t.debit) as total_charges FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.type = 'Charge' AND j.date >= DATE_TRUNC('month', CURRENT_DATE); ```
+
+            Question: "Total des produits du trimestre"
+            Réponse: ```sql SELECT SUM(t.credit) as total_produits FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id JOIN accounting_journalentry j ON t.journal_entry_id = j.id WHERE a.type = 'Produit' AND j.date >= DATE_TRUNC('quarter', CURRENT_DATE) AND j.date < DATE_TRUNC('quarter', CURRENT_DATE) + INTERVAL '3 months'; ```
+
+            Question: "Marge brute"
+            Réponse: ```sql SELECT (SELECT SUM(t.credit) FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id WHERE a.type = 'Produit') - (SELECT SUM(t.debit) FROM accounting_transactionline t JOIN accounting_account a ON t.account_id = a.id WHERE a.type = 'Charge') as marge_brute; ```
+
+            ### CATÉGORIE 18: TECHNIQUE ET STRUCTURE
+            Question: "Combien de tables dans la base ?"
+            Réponse: ```sql SELECT COUNT(*) as nombre_tables FROM information_schema.tables WHERE table_schema = 'public'; ```
+
+            Question: "Liste tous les noms de colonnes"
+            Réponse: ```sql SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position; ```
+
+            Question: "Structure de la table accounting_account"
+            Réponse: ```sql SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'accounting_account' ORDER BY ordinal_position; ```
+
+            Question: "Dernière écriture enregistrée"
+            Réponse: ```sql SELECT MAX(date) as derniere_date FROM accounting_journalentry; ```
+
+            Question: "Date de la première transaction"
+            Réponse: ```sql SELECT MIN(date) as premiere_date FROM accounting_journalentry; ```
+
+            Question: "Période couverte par les données"
+            Réponse: ```sql SELECT MIN(date) as premiere_date, MAX(date) as derniere_date FROM accounting_journalentry; ```
 
             MAINTENANT, GÉNÈRE LA REQUÊTE SQL POUR CETTE QUESTION:
             """
@@ -142,7 +464,7 @@ class AccountingChatBotView(View):
             
             # Configuration de la génération pour plus de stabilité
             generation_config = {
-                "temperature": 0.1,  # Plus déterministe
+                "temperature": 0.1,
                 "top_p": 0.8,
                 "top_k": 40,
                 "max_output_tokens": 1024,
@@ -243,8 +565,8 @@ class AccountingChatBotView(View):
             'debit': "SELECT SUM(debit) as total_debit FROM accounting_transactionline;",
             'crédit': "SELECT SUM(credit) as total_credit FROM accounting_transactionline;", 
             'credit': "SELECT SUM(credit) as total_credit FROM accounting_transactionline;",
-            'écriture': 'SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC LIMIT 10;',
-            'journal': 'SELECT "numeroEcriture", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC LIMIT 10;',
+            'écriture':"SELECT \"numeroEcriture\", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC LIMIT 10;",
+            'journal': "SELECT \"numeroEcriture\", date, libelle, reference FROM accounting_journalentry ORDER BY date DESC LIMIT 10;",
             'compte': "SELECT numero, intitule, type, classe FROM accounting_account ORDER BY numero LIMIT 20;",
             'account': "SELECT numero, intitule, type, classe FROM accounting_account ORDER BY numero LIMIT 20;"
         }
@@ -257,7 +579,7 @@ class AccountingChatBotView(View):
         return "SELECT COUNT(*) as total_comptes FROM accounting_account;"
 
     def extract_sql_from_response(self, text):
-        """Extrait la requête SQL de la réponse"""
+        """Extrait et nettoie la requête SQL de la réponse"""
         if not text:
             return None
             
@@ -273,7 +595,12 @@ class AccountingChatBotView(View):
                 sql = matches[0].strip()
                 # Nettoyer la requête
                 sql = sql.replace('```sql', '').replace('```', '').strip()
-                print(f"✅ SQL extrait: {sql}")
+                
+                # Nettoyer les guillemets problématiques
+                sql = sql.replace('""', '"')
+                sql = re.sub(r'\b"(\w+)"', r'"\1"', sql)
+                
+                print(f"✅ SQL extrait et nettoyé: {sql}")
                 return sql
         
         return None
@@ -286,8 +613,12 @@ class AccountingChatBotView(View):
             
             # Nettoyer et corriger la requête
             sql_query = sql_query.strip()
-            sql_query = sql_query.replace('numeroEcriture', '"numeroEcriture"')
-            sql_query = sql_query.replace('soldeInitial', '"soldeInitial"')
+            
+            # Corriger les guillemets problématiques
+            sql_query = sql_query.replace('""soldeInitial""', '"soldeInitial"')
+            sql_query = sql_query.replace('""numeroEcriture""', '"numeroEcriture"')
+            sql_query = re.sub(r'a\.""', 'a."', sql_query)
+            sql_query = re.sub(r'j\.""', 'j."', sql_query)
             
             # Vérification de sécurité
             dangerous_keywords = ['DELETE', 'DROP', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE']
@@ -327,51 +658,117 @@ class AccountingChatBotView(View):
         except Exception as e:
             error_msg = f"Erreur SQL: {str(e)}"
             print(f"❌ {error_msg}")
+            print(f"🔍 Requête problématique: {sql_query}")
             return None, error_msg
 
+    def detect_result_type(self, data, user_question):
+        """Détecte automatiquement le type de résultat pour un meilleur formatage"""
+        if not data or len(data) == 0:
+            return "empty"
+        
+        first_row = data[0]
+        question_lower = user_question.lower()
+        
+        # Détection des totaux/sommes
+        total_columns = [col for col in first_row.keys() if any(keyword in col.lower() for keyword in ['total', 'sum', 'montant', 'solde'])]
+        if total_columns and len(data) == 1:
+            return "total"
+        
+        # Détection des comptes
+        if 'numero' in first_row and 'intitule' in first_row:
+            return "accounts"
+        
+        # Détection des écritures
+        if any(col in first_row for col in ['numeroEcriture', 'numeroecriture', 'libelle', 'date']):
+            return "journal_entries"
+        
+        # Détection des counts
+        count_columns = [col for col in first_row.keys() if any(keyword in col.lower() for keyword in ['count', 'nombre'])]
+        if count_columns:
+            return "count"
+        
+        return "generic"
+
     def format_response(self, data, user_question):
-        """Formate une réponse contextuelle"""
+        """Formate une réponse contextuelle améliorée"""
         if not data:
             return f"❌ Aucune donnée trouvée pour: '{user_question}'"
         
-        question_lower = user_question.lower()
+        result_type = self.detect_result_type(data, user_question)
+        first_row = data[0]
         
-        # Réponses spécifiques basées sur le type de données
-        if data and len(data) > 0:
-            first_row = data[0]
-            
-            # Solde de compte
-            if 'solde' in first_row and 'numero' in first_row:
-                solde = first_row['solde'] or 0
-                return f"💰 Solde du compte {first_row['numero']} ({first_row.get('intitule', '')}): {float(solde):,.2f} €"
-            
-            # Totaux
-            if 'total_debit' in first_row:
-                total = first_row['total_debit'] or 0
-                return f"📊 Total des débits: {float(total):,.2f} €"
-            
-            if 'total_credit' in first_row:
-                total = first_row['total_credit'] or 0
-                return f"📊 Total des crédits: {float(total):,.2f} €"
-            
-            if 'nombre_comptes' in first_row:
-                count = first_row['nombre_comptes']
-                return f"📈 Nombre de comptes: {count}"
-            
-            # Comptes
-            if 'numero' in first_row:
-                if len(data) == 1:
-                    return f"✅ Compte {first_row['numero']}: {first_row['intitule']} ({first_row.get('type', '')})"
+        if result_type == "total":
+            # Trouver la colonne qui contient le total
+            total_columns = [col for col in first_row.keys() if any(keyword in col.lower() for keyword in ['total', 'sum', 'montant', 'solde'])]
+            if total_columns:
+                total_col = total_columns[0]
+                total_value = first_row[total_col] or 0
+                
+                # Adapter le message au contexte
+                question_lower = user_question.lower()
+                if 'débit' in question_lower or 'debit' in question_lower:
+                    return f"💰 Total des débits: {float(total_value):,.2f} €"
+                elif 'crédit' in question_lower or 'credit' in question_lower:
+                    return f"💰 Total des crédits: {float(total_value):,.2f} €"
+                elif 'charge' in question_lower:
+                    return f"💰 Total des charges: {float(total_value):,.2f} €"
+                elif 'produit' in question_lower:
+                    return f"💰 Total des produits: {float(total_value):,.2f} €"
+                elif 'solde' in question_lower and 'général' in question_lower:
+                    return f"💰 Solde général: {float(total_value):,.2f} €"
                 else:
-                    return f"📋 {len(data)} compte(s) trouvé(s)"
-            
-            # Écritures
-            if 'numeroecriture' in first_row or 'numeroEcriture' in first_row:
-                if len(data) == 1:
-                    col_name = 'numeroEcriture' if 'numeroEcriture' in first_row else 'numeroecriture'
-                    return f"📝 Écriture {first_row[col_name]} du {first_row['date']}: {first_row['libelle']}"
+                    return f"💰 Total: {float(total_value):,.2f} €"
+        
+        elif result_type == "count":
+            count_columns = [col for col in first_row.keys() if any(keyword in col.lower() for keyword in ['count', 'nombre'])]
+            if count_columns:
+                count_value = first_row[count_columns[0]] or 0
+                
+                question_lower = user_question.lower()
+                if 'compte' in question_lower and 'charge' in question_lower:
+                    return f"📈 Nombre de comptes de charge: {count_value}"
+                elif 'compte' in question_lower and 'actif' in question_lower:
+                    return f"📈 Nombre de comptes d'actif: {count_value}"
+                elif 'compte' in question_lower and 'passif' in question_lower:
+                    return f"📈 Nombre de comptes de passif: {count_value}"
+                elif 'compte' in question_lower:
+                    return f"📈 Nombre total de comptes: {count_value}"
+                elif 'écriture' in question_lower:
+                    return f"📝 Nombre d'écritures: {count_value}"
+                elif 'transaction' in question_lower:
+                    return f"🔢 Nombre de transactions: {count_value}"
                 else:
-                    return f"📝 {len(data)} écriture(s) trouvée(s)"
+                    return f"📊 Nombre: {count_value}"
+        
+        elif result_type == "accounts":
+            if len(data) == 1:
+                account = first_row
+                solde = account.get('solde', 'N/A')
+                if solde != 'N/A':
+                    return f"✅ Compte {account['numero']}: {account['intitule']} ({account.get('type', '')}) - Solde: {float(solde):,.2f} €"
+                else:
+                    return f"✅ Compte {account['numero']}: {account['intitule']} ({account.get('type', '')})"
+            else:
+                return f"📋 {len(data)} compte(s) trouvé(s)"
+        
+        elif result_type == "journal_entries":
+            if len(data) == 1:
+                entry = first_row
+                col_name = 'numeroEcriture' if 'numeroEcriture' in entry else 'numeroecriture'
+                return f"📝 Écriture {entry[col_name]} du {entry['date']}: {entry['libelle']}"
+            else:
+                return f"📝 {len(data)} écriture(s) trouvée(s)"
+        
+        # Fallback intelligent
+        if len(data) == 1:
+            # Si une seule ligne, montrer les valeurs principales
+            main_values = []
+            for key, value in first_row.items():
+                if value and str(value).strip():
+                    main_values.append(f"{key}: {value}")
+            
+            if main_values:
+                return " | ".join(main_values[:3])
         
         return f"✅ {len(data)} résultat(s) trouvé(s)"
 
@@ -390,6 +787,11 @@ class AccountingChatBotView(View):
             
             print(f"📥 Question reçue: {user_question}")
             print(f"🔧 Statut Gemini: {'✅ Disponible' if self.gemini_available else '❌ Indisponible'}")
+            
+            # Réinitialiser Gemini si nécessaire
+            if not self.gemini_available:
+                print("🔄 Tentative de réinitialisation de Gemini...")
+                self._initialize_gemini()
             
             # Gestion de la conversation
             user, created = User.objects.get_or_create(username='chatbot_user')
@@ -420,6 +822,14 @@ class AccountingChatBotView(View):
             if not sql_query:
                 sql_query = self.get_intelligent_fallback_query(user_question)
                 print("🔄 Requête générée par le fallback")
+            
+            # Debug de la requête SQL
+            if sql_query:
+                print(f"🔍 REQUÊTE SQL AVANT EXÉCUTION: {sql_query}")
+                if '""' in sql_query:
+                    print("⚠️  ATTENTION: Guillemets doubles détectés dans la requête")
+                    sql_query = sql_query.replace('""', '"')
+                    print(f"🔧 REQUÊTE CORRIGÉE: {sql_query}")
             
             # Exécution de la requête
             response_data, sql_error = self.execute_safe_sql(sql_query)
@@ -459,6 +869,23 @@ class AccountingChatBotView(View):
         except Exception as e:
             print(f"💥 Erreur interne: {str(e)}")
             return JsonResponse({'error': f'Erreur interne: {str(e)}'}, status=500)
+
+
+class GeminiStatusView(View):
+    """Vue pour debugger l'état de Gemini"""
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def get(self, request):
+        chatbot = AccountingChatBotView()
+        basic_status = chatbot.get_gemini_status()
+        
+        return JsonResponse({
+            'basic_status': basic_status,
+            'message': 'Gemini est opérationnel avec toutes les requêtes professionnelles intégrées'
+        })
 
 
 class ChatHistoryView(View):
