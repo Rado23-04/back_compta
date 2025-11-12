@@ -39,10 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Ajout de Django REST Framework
     'rest_framework',
+    # Simple JWT
+    'rest_framework_simplejwt',
     # Ajout de django-cors-headers pour gérer CORS
     'corsheaders',
     # App comptable personnalisée
     'accounting',
+    # App utilisateurs pour l'auth
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -83,9 +87,9 @@ WSGI_APPLICATION = 'back_compta.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'compta', # Nom de la base PostgreSQL
-        'USER': 'compta_user',    # À adapter selon votre config
-        'PASSWORD': 'compta_password',# À adapter selon votre config
+        'NAME': 'db_accounting', # Nom de la base PostgreSQL
+        'USER': 'postgres',    # À adapter selon votre config
+        'PASSWORD': 'radodora',# À adapter selon votre config
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -140,3 +144,36 @@ CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Use a custom user model
+AUTH_USER_MODEL = 'users.User'
+
+# Django REST Framework configuration to use JWT authentication by default
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# Simple JWT configuration (use SECRET_KEY by default; in prod set via env var)
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# CORS: allow local React dev server. In production, tighten this.
+# We keep CORS_ALLOW_ALL_ORIGINS for dev but demonstrate explicit origin.
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOWED_ORIGINS = [
+#    'http://localhost:3000',
+#]

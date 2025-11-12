@@ -21,4 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Inclusion des routes API de l'app accounting
     path('api/', include('accounting.urls')),
+    # Auth routes (register, login, me)
+    path('api/auth/', include('users.urls')),
 ]
