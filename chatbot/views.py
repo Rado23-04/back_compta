@@ -11,12 +11,617 @@ from datetime import datetime, timedelta
 from .models import ChatConversation, ChatMessage
 from django.contrib.auth.models import User
 
+class FinancialAnalyzer:
+    """Classe dédiée à l'analyse financière avancée"""
+    
+    def __init__(self, chat_bot):
+        self.chat_bot = chat_bot
+    
+    def generate_advanced_analysis(self, user_question, sql_data, sql_query):
+        """Génère des analyses avancées avec interprétation financière"""
+        
+        # Détection du type d'analyse demandée
+        analysis_type = self.detect_analysis_type(user_question)
+        print(f"🔍 Type d'analyse détecté: {analysis_type}")
+        
+        analysis_handlers = {
+            'FINANCIAL_HEALTH': self._analyze_financial_health,
+            'CASH_FLOW': self._analyze_cash_flow,
+            'PROFITABILITY': self._analyze_profitability,
+            'BALANCE_SHEET_DETAILED': self._analyze_balance_sheet_detailed,
+            'INCOME_STATEMENT_DETAILED': self._analyze_income_statement_detailed,
+            'ACCOUNT_ANALYSIS': self._analyze_account_trends,
+            'COMPARATIVE_ANALYSIS': self._analyze_comparative_data,
+            'FORECAST': self._generate_forecast
+        }
+        
+        handler = analysis_handlers.get(analysis_type, self._generate_smart_insights)
+        return handler(user_question, sql_data, sql_query)
+
+    def detect_analysis_type(self, user_question):
+        """Détecte le type d'analyse demandé"""
+        question_lower = user_question.lower()
+        
+        analysis_patterns = {
+            'FINANCIAL_HEALTH': [
+                r'santé.*financière', r'situation.*financière', r'équilibre.*financier',
+                r'solidité', r'rentabilité', r'performance.*financière'
+            ],
+            'CASH_FLOW': [
+                r'trésorerie', r'cash.?flow', r'flux.*trésorerie', r'liquidité',
+                r'besoin.*fond.*roulement', r'bfr'
+            ],
+            'PROFITABILITY': [
+                r'profitabilité', r'marge', r'rentabilité', r'bénéfice',
+                r'ratio.*profit', r'taux.*marge'
+            ],
+            'BALANCE_SHEET_DETAILED': [
+                r'bilan.*détaillé', r'analyse.*bilan', r'structure.*financière',
+                r'actif.*passif', r'patrimoine'
+            ],
+            'INCOME_STATEMENT_DETAILED': [
+                r'compte.*résultat.*détaillé', r'analyse.*résultat',
+                r'charges.*produits', r'évolution.*résultat'
+            ],
+            'ACCOUNT_ANALYSIS': [
+                r'analyse.*compte', r'évolution.*compte', r'tendance.*compte',
+                r'solde.*compte.*(\d{1,6})', r'historique.*compte'
+            ],
+            'COMPARATIVE_ANALYSIS': [
+                r'comparaison', r'comparer', r'évolution', r'tendance',
+                r'variation', r'progress'
+            ],
+            'FORECAST': [
+                r'prévision', r'projection', r'estimation', r'prédire',
+                r'avenir', r'futur'
+            ]
+        }
+        
+        scores = {}
+        for analysis_type, patterns in analysis_patterns.items():
+            score = 0
+            for pattern in patterns:
+                if re.search(pattern, question_lower):
+                    score += 2
+            scores[analysis_type] = score
+        
+        best_analysis = max(scores.items(), key=lambda x: x[1])
+        return best_analysis[0] if best_analysis[1] > 0 else 'GENERIC_INSIGHTS'
+
+    def _analyze_financial_health(self, user_question, data, sql_query):
+        """Analyse approfondie de la santé financière"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser la santé financière."
+        
+        # Récupérer les données financières de base
+        financial_data = self._extract_financial_metrics(data)
+        
+        analysis = "🏥 **ANALYSE DE SANTÉ FINANCIÈRE**\n\n"
+        
+        # Score de santé financière
+        health_score = self._calculate_financial_health_score(financial_data)
+        analysis += f"**Score de santé financière**: {health_score}/10\n\n"
+        
+        # Points forts
+        analysis += "✅ **POINTS FORTS**:\n"
+        if financial_data.get('current_ratio', 0) > 1.5:
+            analysis += "• Excellente liquidité à court terme\n"
+        if financial_data.get('profit_margin', 0) > 0.1:
+            analysis += "• Bonne rentabilité des activités\n"
+        if financial_data.get('debt_ratio', 0) < 0.6:
+            analysis += "• Faible endettement\n"
+        if financial_data.get('asset_growth', 0) > 0.05:
+            analysis += "• Croissance patrimoniale positive\n"
+        
+        # Points d'attention
+        analysis += "\n⚠️ **POINTS D'ATTENTION**:\n"
+        if financial_data.get('current_ratio', 0) < 1:
+            analysis += "• Liquidité insuffisante à court terme\n"
+        if financial_data.get('profit_margin', 0) < 0:
+            analysis += "• Rentabilité négative\n"
+        if financial_data.get('debt_ratio', 0) > 0.8:
+            analysis += "• Niveau d'endettement élevé\n"
+        
+        # Recommandations
+        analysis += "\n💡 **RECOMMANDATIONS**:\n"
+        if financial_data.get('current_ratio', 0) < 1:
+            analysis += "• Améliorer la trésorerie et réduire les dettes court terme\n"
+        if financial_data.get('profit_margin', 0) < 0:
+            analysis += "• Revoir la structure des coûts et augmenter la marge\n"
+        if financial_data.get('asset_turnover', 0) < 0.5:
+            analysis += "• Optimiser l'utilisation des actifs\n"
+        
+        return analysis
+
+    def _analyze_cash_flow(self, user_question, data, sql_query):
+        """Analyse de la trésorerie et des flux financiers"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser la trésorerie."
+        
+        cash_data = self._extract_cash_metrics(data)
+        
+        analysis = "💧 **ANALYSE DE TRÉSORERIE**\n\n"
+        
+        # État de la trésorerie
+        cash_position = cash_data.get('cash_balance', 0)
+        analysis += f"**Position de trésorerie**: {cash_position:,.2f} €\n\n"
+        
+        # Analyse des flux
+        analysis += "📊 **ANALYSE DES FLUX**:\n"
+        
+        operating_cash = cash_data.get('operating_cash_flow', 0)
+        if operating_cash > 0:
+            analysis += f"• Flux opérationnel positif: {operating_cash:,.2f} € ✅\n"
+        else:
+            analysis += f"• Flux opérationnel négatif: {operating_cash:,.2f} € ⚠️\n"
+        
+        investing_cash = cash_data.get('investing_cash_flow', 0)
+        if investing_cash < 0:
+            analysis += f"• Investissements: {abs(investing_cash):,.2f} € 📈\n"
+        
+        financing_cash = cash_data.get('financing_cash_flow', 0)
+        if financing_cash != 0:
+            analysis += f"• Financement: {financing_cash:,.2f} €\n"
+        
+        # Recommandations trésorerie
+        analysis += "\n🎯 **CONSEILS TRÉSORERIE**:\n"
+        if cash_position < 10000:
+            analysis += "• Renforcer la trésorerie disponible\n"
+        if operating_cash < 0:
+            analysis += "• Améliorer la génération de cash opérationnel\n"
+        
+        return analysis
+
+    def _analyze_profitability(self, user_question, data, sql_query):
+        """Analyse détaillée de la rentabilité"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser la rentabilité."
+        
+        profit_data = self._extract_profitability_metrics(data)
+        
+        analysis = "📈 **ANALYSE DE RENTABILITÉ**\n\n"
+        
+        # Marges
+        gross_margin = profit_data.get('gross_margin', 0)
+        net_margin = profit_data.get('net_margin', 0)
+        
+        analysis += f"**Marge brute**: {gross_margin:.1%}\n"
+        analysis += f"**Marge nette**: {net_margin:.1%}\n\n"
+        
+        # Interprétation des marges
+        analysis += "📋 **INTERPRÉTATION**:\n"
+        if net_margin > 0.15:
+            analysis += "• Excellente rentabilité 🎯\n"
+        elif net_margin > 0.05:
+            analysis += "• Bonne rentabilité ✅\n"
+        elif net_margin > 0:
+            analysis += "• Rentabilité modérée ⚠️\n"
+        else:
+            analysis += "• Rentabilité négative ❌\n"
+        
+        # Analyse des coûts
+        analysis += "\n💰 **ANALYSE DES COÛTS**:\n"
+        cost_ratio = profit_data.get('cost_ratio', 0)
+        analysis += f"• Ratio charges/produits: {cost_ratio:.1%}\n"
+        
+        if cost_ratio > 0.9:
+            analysis += "• Structure de coûts à optimiser\n"
+        
+        return analysis
+
+    def _analyze_balance_sheet_detailed(self, user_question, data, sql_query):
+        """Analyse détaillée du bilan"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser le bilan."
+        
+        balance_data = self._extract_balance_sheet_metrics(data)
+        
+        analysis = "⚖️ **ANALYSE DÉTAILLÉE DU BILAN**\n\n"
+        
+        # Structure du bilan
+        analysis += "🏗️ **STRUCTURE DU BILAN**:\n"
+        analysis += f"• Actif total: {balance_data.get('total_assets', 0):,.2f} €\n"
+        analysis += f"• Passif total: {balance_data.get('total_liabilities', 0):,.2f} €\n"
+        analysis += f"• Capitaux propres: {balance_data.get('equity', 0):,.2f} €\n\n"
+        
+        # Ratios financiers
+        analysis += "📊 **RATIOS FINANCIERS**:\n"
+        
+        debt_ratio = balance_data.get('debt_ratio', 0)
+        analysis += f"• Ratio d'endettement: {debt_ratio:.1%}\n"
+        
+        current_ratio = balance_data.get('current_ratio', 0)
+        analysis += f"• Ratio de liquidité: {current_ratio:.2f}\n"
+        
+        # Interprétation
+        analysis += "\n🔍 **INTERPRÉTATION**:\n"
+        if debt_ratio < 0.5:
+            analysis += "• Structure financière saine ✅\n"
+        elif debt_ratio < 0.7:
+            analysis += "• Endettement modéré ⚠️\n"
+        else:
+            analysis += "• Endettement élevé ❌\n"
+        
+        if current_ratio > 1.5:
+            analysis += "• Excellente liquidité ✅\n"
+        elif current_ratio > 1:
+            analysis += "• Liquidité acceptable ⚠️\n"
+        else:
+            analysis += "• Problème de liquidité ❌\n"
+        
+        return analysis
+
+    def _analyze_income_statement_detailed(self, user_question, data, sql_query):
+        """Analyse détaillée du compte de résultat"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser le compte de résultat."
+        
+        income_data = self._extract_income_statement_metrics(data)
+        
+        analysis = "📊 **ANALYSE DÉTAILLÉE DU COMPTE DE RÉSULTAT**\n\n"
+        
+        # Chiffre d'affaires et résultat
+        analysis += "💰 **CHIFFRE D'AFFAIRES ET RÉSULTAT**:\n"
+        analysis += f"• Produits totaux: {income_data.get('total_revenue', 0):,.2f} €\n"
+        analysis += f"• Charges totales: {income_data.get('total_expenses', 0):,.2f} €\n"
+        analysis += f"• Résultat net: {income_data.get('net_income', 0):,.2f} €\n\n"
+        
+        # Structure des charges
+        analysis += "📋 **STRUCTURE DES CHARGES**:\n"
+        expense_breakdown = income_data.get('expense_breakdown', {})
+        for expense_type, amount in expense_breakdown.items():
+            if amount > 0:
+                percentage = (amount / income_data.get('total_revenue', 1)) * 100
+                analysis += f"• {expense_type}: {percentage:.1f}% du CA\n"
+        
+        # Analyse de performance
+        analysis += "\n🎯 **PERFORMANCE**:\n"
+        growth_rate = income_data.get('revenue_growth', 0)
+        if growth_rate > 0.1:
+            analysis += f"• Croissance forte: +{growth_rate:.1%} 📈\n"
+        elif growth_rate > 0:
+            analysis += f"• Croissance modérée: +{growth_rate:.1%} ✅\n"
+        else:
+            analysis += f"• Décroissance: {growth_rate:.1%} ⚠️\n"
+        
+        return analysis
+
+    def _analyze_account_trends(self, user_question, data, sql_query):
+        """Analyse des tendances par compte"""
+        if not data:
+            return "❌ Données insuffisantes pour analyser les tendances."
+        
+        analysis = "📈 **ANALYSE DES TENDANCES PAR COMPTE**\n\n"
+        
+        # Regrouper par compte si possible
+        account_data = {}
+        for item in data:
+            account_num = item.get('numero', 'Inconnu')
+            if account_num not in account_data:
+                account_data[account_num] = []
+            account_data[account_num].append(item)
+        
+        for account_num, items in list(account_data.items())[:5]:  # Limiter à 5 comptes
+            if len(items) > 1:
+                analysis += f"**Compte {account_num}**:\n"
+                # Calculer l'évolution
+                first_solde = self.chat_bot._extract_numeric_value(items[0], 'solde')
+                last_solde = self.chat_bot._extract_numeric_value(items[-1], 'solde')
+                
+                if first_solde != 0:
+                    evolution = ((last_solde - first_solde) / abs(first_solde)) * 100
+                    analysis += f"• Évolution: {evolution:+.1f}%\n"
+                analysis += "\n"
+        
+        return analysis
+
+    def _analyze_comparative_data(self, user_question, data, sql_query):
+        """Analyse comparative des données"""
+        if not data or len(data) < 2:
+            return "❌ Données insuffisantes pour une analyse comparative."
+        
+        analysis = "📊 **ANALYSE COMPARATIVE**\n\n"
+        
+        # Statistiques descriptives
+        numeric_values = []
+        for item in data:
+            for key, value in item.items():
+                if isinstance(value, (int, float)) and value != 0:
+                    numeric_values.append(value)
+        
+        if numeric_values:
+            analysis += f"• Valeur moyenne: {sum(numeric_values)/len(numeric_values):,.2f} €\n"
+            analysis += f"• Écart-type: {self._calculate_std_dev(numeric_values):,.2f} €\n"
+            analysis += f"• Coefficient de variation: {self._calculate_std_dev(numeric_values)/(sum(numeric_values)/len(numeric_values)) if sum(numeric_values) != 0 else 0:.1%}\n\n"
+        
+        # Distribution
+        analysis += "📋 **DISTRIBUTION**:\n"
+        analysis += f"• Minimum: {min(numeric_values):,.2f} €\n"
+        analysis += f"• Maximum: {max(numeric_values):,.2f} €\n"
+        analysis += f"• Médiane: {sorted(numeric_values)[len(numeric_values)//2]:,.2f} €\n"
+        
+        return analysis
+
+    def _generate_forecast(self, user_question, data, sql_query):
+        """Génère des prévisions basées sur les données historiques"""
+        if not data or len(data) < 3:
+            return "❌ Données historiques insuffisantes pour une prévision."
+        
+        analysis = "🔮 **PRÉVISIONS ET TENDANCES**\n\n"
+        
+        # Simple prévision linéaire
+        trend = self._calculate_trend(data)
+        if trend:
+            analysis += f"• Tendance détectée: {'📈 Hausse' if trend > 0 else '📉 Baisse'}\n"
+            analysis += f"• Pente moyenne: {trend:+.2f} par période\n\n"
+        
+        analysis += "💡 **RECOMMANDATIONS STRATÉGIQUES**:\n"
+        if trend and trend > 0:
+            analysis += "• Poursuivre la stratégie actuelle\n"
+            analysis += "• Investir dans la croissance\n"
+        elif trend and trend < 0:
+            analysis += "• Revoir la stratégie commerciale\n"
+            analysis += "• Optimiser les coûts\n"
+        else:
+            analysis += "• Stabiliser les performances\n"
+            analysis += "• Diversifier les activités\n"
+        
+        return analysis
+
+    def _generate_smart_insights(self, user_question, data, sql_query):
+        """Génère des insights intelligents basés sur les données"""
+        if not data:
+            return "🤔 Je n'ai pas trouvé de données pour générer des insights."
+        
+        analysis = "💡 **INSIGHTS INTELLIGENTS**\n\n"
+        
+        # Détection de patterns
+        patterns = self._detect_data_patterns(data)
+        
+        for pattern, insight in patterns.items():
+            analysis += f"• {insight}\n"
+        
+        # Recommandations basées sur les données
+        recommendations = self._generate_data_recommendations(data)
+        if recommendations:
+            analysis += "\n🎯 **RECOMMANDATIONS**:\n"
+            for rec in recommendations[:3]:  # Limiter à 3 recommandations
+                analysis += f"• {rec}\n"
+        
+        return analysis
+
+    # ==================== MÉTHODES DE SUPPORT POUR L'ANALYSE ====================
+
+    def _extract_financial_metrics(self, data):
+        """Extrait les métriques financières des données"""
+        metrics = {
+            'total_assets': 0,
+            'total_liabilities': 0,
+            'current_ratio': 0,
+            'debt_ratio': 0,
+            'profit_margin': 0,
+            'asset_growth': 0,
+            'asset_turnover': 0
+        }
+        
+        # Implémentation simplifiée - à adapter selon votre structure de données
+        for item in data:
+            if 'solde' in item:
+                solde = self.chat_bot._extract_numeric_value(item, 'solde')
+                if solde > 0:
+                    metrics['total_assets'] += solde
+                else:
+                    metrics['total_liabilities'] += abs(solde)
+        
+        # Calcul des ratios
+        if metrics['total_liabilities'] > 0:
+            metrics['current_ratio'] = metrics['total_assets'] / metrics['total_liabilities'] if metrics['total_liabilities'] > 0 else 0
+            metrics['debt_ratio'] = metrics['total_liabilities'] / (metrics['total_assets'] + metrics['total_liabilities'])
+        
+        return metrics
+
+    def _extract_cash_metrics(self, data):
+        """Extrait les métriques de trésorerie"""
+        metrics = {
+            'cash_balance': 0,
+            'operating_cash_flow': 0,
+            'investing_cash_flow': 0,
+            'financing_cash_flow': 0
+        }
+        
+        # Implémentation simplifiée
+        for item in data:
+            if 'numero' in item and str(item['numero']).startswith('5'):  # Comptes de trésorerie
+                metrics['cash_balance'] += self.chat_bot._extract_numeric_value(item, 'solde')
+        
+        return metrics
+
+    def _extract_profitability_metrics(self, data):
+        """Extrait les métriques de rentabilité"""
+        metrics = {
+            'gross_margin': 0,
+            'net_margin': 0,
+            'cost_ratio': 0
+        }
+        
+        total_revenue = 0
+        total_costs = 0
+        
+        for item in data:
+            if 'numero' in item:
+                account_num = str(item['numero'])
+                solde = self.chat_bot._extract_numeric_value(item, 'solde')
+                
+                if account_num.startswith('7'):  # Produits
+                    total_revenue += solde
+                elif account_num.startswith('6'):  # Charges
+                    total_costs += solde
+        
+        if total_revenue > 0:
+            metrics['gross_margin'] = (total_revenue - total_costs) / total_revenue
+            metrics['net_margin'] = (total_revenue - total_costs) / total_revenue
+            metrics['cost_ratio'] = total_costs / total_revenue
+        
+        return metrics
+
+    def _extract_balance_sheet_metrics(self, data):
+        """Extrait les métriques du bilan"""
+        return self._extract_financial_metrics(data)  # Réutilise la même logique pour l'instant
+
+    def _extract_income_statement_metrics(self, data):
+        """Extrait les métriques du compte de résultat"""
+        metrics = {
+            'total_revenue': 0,
+            'total_expenses': 0,
+            'net_income': 0,
+            'revenue_growth': 0,
+            'expense_breakdown': {}
+        }
+        
+        for item in data:
+            if 'numero' in item:
+                account_num = str(item['numero'])
+                solde = self.chat_bot._extract_numeric_value(item, 'solde')
+                
+                if account_num.startswith('7'):  # Produits
+                    metrics['total_revenue'] += solde
+                    account_class = account_num[:2]
+                    metrics['expense_breakdown'][f'Produits classe {account_class}'] = \
+                        metrics['expense_breakdown'].get(f'Produits classe {account_class}', 0) + solde
+                elif account_num.startswith('6'):  # Charges
+                    metrics['total_expenses'] += solde
+                    account_class = account_num[:2]
+                    metrics['expense_breakdown'][f'Charges classe {account_class}'] = \
+                        metrics['expense_breakdown'].get(f'Charges classe {account_class}', 0) + solde
+        
+        metrics['net_income'] = metrics['total_revenue'] - metrics['total_expenses']
+        
+        return metrics
+
+    def _calculate_financial_health_score(self, financial_data):
+        """Calcule un score de santé financière (0-10)"""
+        score = 5  # Score de base
+        
+        # Facteurs positifs
+        if financial_data.get('current_ratio', 0) > 1.5:
+            score += 2
+        if financial_data.get('profit_margin', 0) > 0.1:
+            score += 2
+        if financial_data.get('debt_ratio', 0) < 0.5:
+            score += 1
+        
+        # Facteurs négatifs
+        if financial_data.get('current_ratio', 0) < 1:
+            score -= 2
+        if financial_data.get('profit_margin', 0) < 0:
+            score -= 2
+        if financial_data.get('debt_ratio', 0) > 0.8:
+            score -= 1
+        
+        return max(0, min(10, score))
+
+    def _calculate_std_dev(self, values):
+        """Calcule l'écart-type"""
+        if len(values) < 2:
+            return 0
+        mean = sum(values) / len(values)
+        variance = sum((x - mean) ** 2 for x in values) / len(values)
+        return variance ** 0.5
+
+    def _calculate_trend(self, data):
+        """Calcule la tendance des données"""
+        if len(data) < 2:
+            return None
+        
+        numeric_values = []
+        for item in data:
+            for key, value in item.items():
+                if isinstance(value, (int, float)) and value != 0:
+                    numeric_values.append(value)
+                    break  # Prendre une seule valeur par ligne
+        
+        if len(numeric_values) < 2:
+            return None
+        
+        # Régression linéaire simple
+        x = list(range(len(numeric_values)))
+        y = numeric_values
+        
+        n = len(x)
+        if n == 0:
+            return None
+            
+        sum_x = sum(x)
+        sum_y = sum(y)
+        sum_xy = sum(x[i] * y[i] for i in range(n))
+        sum_x2 = sum(xi * xi for xi in x)
+        
+        try:
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+            return slope
+        except ZeroDivisionError:
+            return None
+
+    def _detect_data_patterns(self, data):
+        """Détecte des patterns dans les données"""
+        patterns = {}
+        
+        if not data:
+            return patterns
+        
+        # Pattern de croissance/décroissance
+        trend = self._calculate_trend(data)
+        if trend and trend > 0.1:
+            patterns['growth'] = "Tendance à la hausse détectée"
+        elif trend and trend < -0.1:
+            patterns['decline'] = "Tendance à la baisse détectée"
+        
+        # Pattern de concentration
+        if len(data) > 5:
+            values = [self.chat_bot._extract_numeric_value(item, 'solde') for item in data if 'solde' in item]
+            if values:
+                max_value = max(values)
+                if max_value > sum(values) * 0.5:  # Une valeur représente plus de 50%
+                    patterns['concentration'] = "Fort concentration sur quelques éléments"
+        
+        return patterns
+
+    def _generate_data_recommendations(self, data):
+        """Génère des recommandations basées sur les données"""
+        recommendations = []
+        
+        if not data:
+            return recommendations
+        
+        # Analyser la structure des données pour faire des recommandations
+        total_debit = sum(self.chat_bot._extract_numeric_value(item, 'debit') for item in data if 'debit' in item)
+        total_credit = sum(self.chat_bot._extract_numeric_value(item, 'credit') for item in data if 'credit' in item)
+        
+        if total_debit > total_credit * 1.5:
+            recommendations.append("Équilibrez les débits et crédits pour une meilleure gestion")
+        
+        # Recommandations basées sur les comptes
+        account_types = {}
+        for item in data:
+            if 'numero' in item:
+                account_class = str(item['numero'])[0]  # Première classe
+                account_types[account_class] = account_types.get(account_class, 0) + 1
+        
+        if '6' in account_types and account_types['6'] > 10:
+            recommendations.append("Revoyez la structure des charges (trop de comptes de classe 6)")
+        
+        if '4' in account_types and account_types['4'] > 5:
+            recommendations.append("Surveillez les comptes fournisseurs (classe 4)")
+        
+        return recommendations
+
 class AccountingChatBotView(View):
     
     def __init__(self):
         super().__init__()
         self.model = None
         self.gemini_available = False
+        self.financial_analyzer = FinancialAnalyzer(self)
         self._initialize_gemini()
     
     def _initialize_gemini(self):
@@ -186,6 +791,11 @@ class AccountingChatBotView(View):
     def generate_precise_response(self, user_question, sql_data, sql_query):
         """Génère une réponse EXACTE basée sur l'intention détectée"""
         intent = self.detect_user_intent(user_question)
+        
+        # Vérifier si une analyse avancée est demandée
+        if any(keyword in user_question.lower() for keyword in ['analyse', 'interprétation', 'bilan', 'tendance', 'évolution', 'ratio', 'santé']):
+            print("🔍 Analyse avancée demandée")
+            return self.financial_analyzer.generate_advanced_analysis(user_question, sql_data, sql_query)
         
         # Réponses spécifiques par intention
         response_handlers = {
@@ -808,23 +1418,44 @@ class AccountingChatBotView(View):
                 return JsonResponse({'error': 'La question est requise'}, status=400)
             
             print(f"📥 Question: {user_question}")
-            print(f"🔧 Statut Gemini: {'✅ Disponible' if self.gemini_available else '❌ Indisponible'}")
+            print(f"🎯 Session ID: {session_id}")
             
             # Réinitialisation si nécessaire
             if not self.gemini_available:
                 self._initialize_gemini()
             
-            # Gestion conversation
-            user, created = User.objects.get_or_create(username='chatbot_user')
-            conversation, created = ChatConversation.objects.get_or_create(
-                session_id=session_id, defaults={'user': user}
-            )
+            # ✅ AMÉLIORATION: Gestion robuste de la conversation
+            try:
+                user, created = User.objects.get_or_create(username='chatbot_user')
+                conversation, created = ChatConversation.objects.get_or_create(
+                    session_id=session_id, 
+                    defaults={
+                        'user': user,
+                        'title': user_question[:50] + '...' if len(user_question) > 50 else user_question
+                    }
+                )
+                
+                # ✅ Mise à jour du titre si la conversation existe déjà
+                if not created:
+                    # Garder le titre original ou mettre à jour si c'est le premier message
+                    if not conversation.title or conversation.title == 'Nouvelle conversation':
+                        conversation.title = user_question[:50] + '...' if len(user_question) > 50 else user_question
+                        conversation.save()
+                
+            except Exception as e:
+                print(f"❌ Erreur gestion conversation: {str(e)}")
+                return JsonResponse({'error': 'Erreur gestion conversation'}, status=500)
             
-            ChatMessage.objects.create(
-                conversation=conversation,
-                message_type='USER',
-                content=user_question
-            )
+            # ✅ Enregistrement du message utilisateur
+            try:
+                user_message = ChatMessage.objects.create(
+                    conversation=conversation,
+                    message_type='USER',
+                    content=user_question
+                )
+                print(f"✅ Message utilisateur enregistré: {user_message.id}")
+            except Exception as e:
+                print(f"❌ Erreur enregistrement message utilisateur: {str(e)}")
             
             # Génération SQL
             sql_query = None
@@ -849,50 +1480,58 @@ class AccountingChatBotView(View):
             # Exécution
             response_data, sql_error = self.execute_safe_sql(sql_query)
             
-            # ✅ NOUVELLE MÉTHODE DE RÉPONSE INTELLIGENTE
+            # Génération de la réponse
             if sql_error:
                 bot_response = "❌ Difficulté technique avec cette requête. Reformulez votre question."
             else:
                 if self.gemini_available:
-                    # Essayer d'abord la réponse conversationnelle
                     conversational_response = self.generate_conversational_response(user_question, response_data, sql_query)
                     if conversational_response and len(conversational_response) > 30:
                         bot_response = conversational_response
                     else:
-                        # Fallback sur le système intentionnel
                         bot_response = self.generate_precise_response(user_question, response_data, sql_query)
                 else:
-                    # Système intentionnel direct
                     bot_response = self.generate_precise_response(user_question, response_data, sql_query)
             
-            print(f"📤 Réponse générée")
+            print(f"📤 Réponse générée: {len(bot_response)} caractères")
             
-            # Sauvegarde
-            bot_message = ChatMessage.objects.create(
-                conversation=conversation,
-                message_type='BOT',
-                content=bot_response,
-                sql_query_used=sql_query,
-                metadata={
-                    'data_count': len(response_data) if response_data else 0,
-                    'gemini_used': gemini_used,
-                    'gemini_available': self.gemini_available,
-                    'error': sql_error
-                }
-            )
+            # ✅ ENREGISTREMENT ROBUSTE DE LA RÉPONSE DU BOT
+            try:
+                bot_message = ChatMessage.objects.create(
+                    conversation=conversation,
+                    message_type='BOT',
+                    content=bot_response,
+                    sql_query_used=sql_query,
+                    metadata={
+                        'data_count': len(response_data) if response_data else 0,
+                        'gemini_used': gemini_used,
+                        'gemini_available': self.gemini_available,
+                        'error': sql_error,
+                        'user_question': user_question  # ✅ Stocker aussi la question originale
+                    }
+                )
+                print(f"✅ Message bot enregistré: {bot_message.id}")
+                
+                # ✅ Mise à jour du timestamp de la conversation
+                conversation.save()  # Cela met à jour le champ updated_at automatiquement
+                
+            except Exception as e:
+                print(f"❌ Erreur enregistrement message bot: {str(e)}")
+                # Continuer même si l'enregistrement échoue
             
             return JsonResponse({
                 'response': bot_response,
-                'session_id': session_id,
+                'session_id': session_id,  # ✅ Retourner le même session_id
                 'data_count': len(response_data) if response_data else 0,
                 'has_data': bool(response_data and len(response_data) > 0),
                 'gemini_used': gemini_used,
                 'gemini_available': self.gemini_available,
-                'timestamp': bot_message.timestamp.isoformat()
+                'conversation_id': conversation.id,  # ✅ Retourner l'ID de conversation
+                'timestamp': bot_message.timestamp.isoformat() if 'bot_message' in locals() else datetime.now().isoformat()
             })
             
         except Exception as e:
-            print(f"💥 Erreur: {str(e)}")
+            print(f"💥 Erreur globale: {str(e)}")
             return JsonResponse({
                 'error': 'Problème technique. Réessayez.'
             }, status=500)
@@ -908,10 +1547,9 @@ class GeminiStatusView(View):
     
     def get(self, request):
         chatbot = AccountingChatBotView()
-        basic_status = chatbot.get_gemini_status()
         
         return JsonResponse({
-            'basic_status': basic_status,
+            'gemini_available': chatbot.gemini_available,
             'message': 'Système comptable IA opérationnel'
         })
 
@@ -1011,6 +1649,39 @@ class ConversationListView(View):
                 })
             
             return JsonResponse({'conversations': conversation_list})
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+class CreateConversationView(View):
+    """Vue pour créer une nouvelle conversation"""
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            session_id = data.get('session_id', f"session_{datetime.now().timestamp()}")
+            title = data.get('title', 'Nouvelle conversation')
+            
+            user, created = User.objects.get_or_create(username='chatbot_user')
+            conversation, created = ChatConversation.objects.get_or_create(
+                session_id=session_id,
+                defaults={
+                    'user': user,
+                    'title': title
+                }
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'session_id': conversation.session_id,
+                'conversation_id': conversation.id,
+                'title': conversation.title,
+                'created': created
+            })
             
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
