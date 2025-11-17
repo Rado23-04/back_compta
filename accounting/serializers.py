@@ -47,3 +47,5 @@ class JournalEntrySerializer(serializers.ModelSerializer):
             user = request.user
 
         return update_journal_entry(instance, validated_data, user)
+    
+    #engagement sociabilité

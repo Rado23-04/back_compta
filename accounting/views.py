@@ -65,6 +65,10 @@ def entry_list(request, pk=None):
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 	elif request.method == 'POST':
+		# Permission: comptable and admin-comptable may create entries
+		if getattr(request.user, 'role', None) not in ('comptable', 'admin-comptable'):
+			return Response({'detail': 'You do not have permission to create journal entries.'}, status=status.HTTP_403_FORBIDDEN)
+
 		data = parse_data(request.data)
 		serializer = JournalEntrySerializer(data=data, context={'request': request})
 		if serializer.is_valid():
@@ -76,6 +80,10 @@ def entry_list(request, pk=None):
 		if not pk:
 			return Response({"PK": "L'ID de l'écriture est requis pour la mise à jour."}, status=status.HTTP_400_BAD_REQUEST)
 		
+		# Only admin-comptable may modify entries
+		if getattr(request.user, 'role', None) != 'admin-comptable':
+			return Response({'detail': 'You do not have permission to modify journal entries.'}, status=status.HTTP_403_FORBIDDEN)
+
 		try:
 			entry = JournalEntry.objects.get(pk=pk, owner=request.user)
 		except JournalEntry.DoesNotExist:
@@ -94,6 +102,10 @@ def entry_list(request, pk=None):
 		if not pk:
 			return Response({"PK": "L'ID de l'écriture est requis pour la suppression."}, status=status.HTTP_400_BAD_REQUEST)
 		
+		# Only admin-comptable may delete entries
+		if getattr(request.user, 'role', None) != 'admin-comptable':
+			return Response({'detail': 'You do not have permission to delete journal entries.'}, status=status.HTTP_403_FORBIDDEN)
+
 		try:
 			entry = JournalEntry.objects.prefetch_related('lines').get(pk=pk, owner=request.user)
 		except JournalEntry.DoesNotExist:

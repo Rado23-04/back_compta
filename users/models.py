@@ -36,16 +36,18 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_USER = 'USER'
-    ROLE_ADMIN = 'ADMIN'
+    # Roles for accounting application
+    ROLE_COMPTABLE = 'comptable'
+    ROLE_ADMIN_COMPTABLE = 'admin-comptable'
     ROLE_CHOICES = [
-        (ROLE_USER, 'User'),
-        (ROLE_ADMIN, 'Admin'),
+        (ROLE_COMPTABLE, 'Comptable'),
+        (ROLE_ADMIN_COMPTABLE, 'Admin Comptable'),
     ]
 
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=150, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_USER)
+    # role: 'comptable' or 'admin-comptable'
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_COMPTABLE)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

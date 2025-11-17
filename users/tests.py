@@ -8,12 +8,12 @@ User = get_user_model()
 
 class AuthTests(APITestCase):
     def test_register(self):
-        url = '/api/auth/register'
+        url = '/api/auth/register/'
         data = {
             'email': 'testuser@example.com',
             'password': 'strongpassword123',
             'name': 'Test User',
-            'role': 'USER',
+            'role': 'comptable',
         }
         resp = self.client.post(url, data, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
@@ -23,8 +23,8 @@ class AuthTests(APITestCase):
 
     def test_login(self):
         # Create user first
-        user = User.objects.create_user(email='loginuser@example.com', password='mypassword123', name='Login')
-        url = '/api/auth/login'
+        user = User.objects.create_user(email='loginuser@example.com', password='mypassword123', name='Login', role='comptable')
+        url = '/api/auth/login/'
         data = {
             'email': 'loginuser@example.com',
             'password': 'mypassword123',
