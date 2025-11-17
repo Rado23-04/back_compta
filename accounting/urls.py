@@ -10,6 +10,7 @@ from users.serializers import MyTokenObtainPairSerializer
 urlpatterns = [
     path('accounts/', views.account_list, name='account-list'),
     path('accounts/<int:pk>/', views.account_list, name='account-detail'),
+    path('accounts/<int:pk>/import_pcg/', views.import_pcg, name='account-import-pcg'),
     path('entries/', views.entry_list, name='entry-list'),
     path('entries/<int:pk>/', views.entry_list, name='entry-detail'),
     path('api/token/', TokenObtainPairView.as_view(serializer_class=MyTokenObtainPairSerializer), name='token_obtain_pair'),

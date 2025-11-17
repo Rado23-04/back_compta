@@ -9,7 +9,7 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='auth-register'),
     # Alias historique pour compatibilité frontend
     path('signup/', RegisterView.as_view(), name='auth-signup'),
-    path('login/', LoginView.as_view(), name='auth-login'),
+    path('login/', LoginView.as_view(), name='auth-login'),  #http://127.0.0.1:8000/api/auth/login/
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('me/', MeView.as_view(), name='auth-me'),
     # Token endpoint using custom serializer that injects 'role' into JWT payload

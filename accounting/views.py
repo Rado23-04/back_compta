@@ -2,6 +2,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db import transaction
 
 from .utils import parse_data
 from .models import Account, JournalEntry
@@ -114,3 +116,69 @@ def entry_list(request, pk=None):
 		entry.delete()
 
 		return Response({"Journal":"Ecriture effacé"} ,status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+def import_pcg(request, pk):
+	"""Import a PCG JSON (sent as body) into the DB and assign created accounts
+	to the owner of the Account with id=pk.
+
+	- If the request body is a JSON array, it will be used as the PCG list.
+	- If the body is empty, this action will return 400 (client must send PCG).
+	"""
+
+	# Authentication: require logged user
+	if not request.user or not request.user.is_authenticated:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+	# Find target account and owner
+	target = get_object_or_404(Account, pk=pk)
+	owner = target.owner
+	# If the target has no owner, assign the importing user as owner.
+	# If the target has an owner different from the requester, only allow admins to import.
+	if owner is None:
+		owner = request.user
+		# persist the owner on the target account to keep ownership consistent
+		target.owner = owner
+		target.save()
+	elif owner != request.user and getattr(request.user, 'role', None) != 'admin-comptable':
+		return Response({'detail': 'You do not have permission to import into this account.'}, status=status.HTTP_403_FORBIDDEN)
+
+	data = request.data
+	if not data:
+		return Response({'detail': 'Please provide PCG JSON array in request body.'}, status=status.HTTP_400_BAD_REQUEST)
+
+	# Accept wrapper objects like {"items": [...]} or raw list
+	if isinstance(data, dict):
+		data = data.get('items') or data.get('pcg') or [data]
+
+	if not isinstance(data, list):
+		return Response({'detail': 'Expected a JSON array.'}, status=status.HTTP_400_BAD_REQUEST)
+
+	existing = set(Account.objects.filter(owner=owner).values_list('numero', flat=True))
+	to_create = []
+	for item in data:
+		numero = item.get('numero')
+		if not numero:
+			continue
+		if numero in existing:
+			continue
+		acct = Account(
+			owner=owner,
+			numero=numero,
+			intitule=item.get('intitule', ''),
+			classe=item.get('classe') or 0,
+			type=item.get('type', ''),
+			nature=item.get('nature'),
+			soldeInitial=item.get('soldeInitial') or 0,
+		)
+		to_create.append(acct)
+
+	created_count = 0
+	if to_create:
+		with transaction.atomic():
+			created = Account.objects.bulk_create(to_create)
+			created_count = len(created)
+
+	return Response({'created': created_count}, status=status.HTTP_201_CREATED)
