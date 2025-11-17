@@ -31,9 +31,19 @@ class JournalEntrySerializer(serializers.ModelSerializer):
         fields = ['id', 'date', 'libelle', 'reference', 'numeroEcriture', 'nature', 'created_at', 'updated_at', 'lines']
 
     def create(self, validated_data):
+        # Pass the request user down to the service to ensure created objects are owned by the user
+        user = None
+        request = self.context.get('request') if hasattr(self, 'context') else None
+        if request is not None:
+            user = request.user
 
-        return create_journal_entry(validated_data)
+        return create_journal_entry(validated_data, user)
 
     def update(self, instance, validated_data):
-        
-        return update_journal_entry(instance, validated_data)
+        # Pass the request user so updates validate ownership
+        user = None
+        request = self.context.get('request') if hasattr(self, 'context') else None
+        if request is not None:
+            user = request.user
+
+        return update_journal_entry(instance, validated_data, user)

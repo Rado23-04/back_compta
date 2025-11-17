@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     # App comptable personnalisée
     'accounting',
     # App utilisateurs pour l'auth
-    'users',
+    'users'
 ]
 
 MIDDLEWARE = [
@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'back_compta.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_accounting', # Nom de la base PostgreSQL
+        'NAME': 'db_accounting1', # Nom de la base PostgreSQL
         'USER': 'postgres',    # À adapter selon votre config
         'PASSWORD': 'radodora',# À adapter selon votre config
         'HOST': 'localhost',
@@ -151,6 +151,9 @@ AUTH_USER_MODEL = 'users.User'
 # Django REST Framework configuration to use JWT authentication by default
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        # Try cookie-based authentication first (reads 'access' cookie)
+        'users.authentication.CookieJWTAuthentication',
+        # Fallback to header based auth (Authorization: Bearer <token>)
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -172,8 +175,12 @@ SIMPLE_JWT = {
 }
 
 # CORS: allow local React dev server. In production, tighten this.
-# We keep CORS_ALLOW_ALL_ORIGINS for dev but demonstrate explicit origin.
-CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#    'http://localhost:3000',
-#]
+# Allow credentials so cookies (HttpOnly) can be sent from the browser
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+]
+
+# Note: in dev you may prefer CORS_ALLOW_ALL_ORIGINS = True, but that
+# doesn't allow credentials to be sent by browsers. Use the explicit
+# whitelist above when using cookies for auth.

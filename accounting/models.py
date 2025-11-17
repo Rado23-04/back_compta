@@ -1,8 +1,11 @@
 
 from django.db import models
+from django.conf import settings
 
 # Modèle Django pour un compte comptable
 class Account(models.Model):
+	# Owner / utilisateur auquel appartient ce compte
+	owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='accounts', on_delete=models.CASCADE, null=True, blank=True)
 	numero = models.CharField(max_length=20)  # Numéro de compte (ex: 411000)
 	intitule = models.CharField(max_length=100)  # Intitulé du compte
 	classe = models.IntegerField()  # Classe comptable (1 à 8)
@@ -24,6 +27,8 @@ class Account(models.Model):
 
 # Modèle Django pour une écriture comptable (JournalEntry)
 class JournalEntry(models.Model):
+	# Owner / utilisateur auquel appartient cette écriture
+	owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='entries', on_delete=models.CASCADE, null=True, blank=True)
 	date = models.DateField()  # Date de l'écriture
 	libelle = models.CharField(max_length=200)  # Libellé de l'opération
 	reference = models.CharField(max_length=100, blank=True, null=True)  # Référence (optionnel)

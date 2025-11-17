@@ -4,7 +4,7 @@ from rest_framework import serializers
 from ..models import Account, JournalEntry, TransactionLine
 from ..utils import check_balance#, update_account_solde
 
-def create_journal_entry(validated_data):
+def create_journal_entry(validated_data, user=None):
 
     lines = validated_data.pop('lines', [])
 
@@ -16,13 +16,24 @@ def create_journal_entry(validated_data):
 
     with transaction.atomic():
 
+        # Ensure the created JournalEntry is owned by the authenticated user (if provided)
+        if user is not None:
+            validated_data['owner'] = user
+
         journal_entry = JournalEntry.objects.create(**validated_data)
         
         tListObject = []
 
         for idx, line in enumerate(lines):
 
-            account = Account.objects.get(numero=line["accountNumber"])
+            # Ensure the account belongs to the user (if user provided), otherwise raise
+            if user is not None:
+                try:
+                    account = Account.objects.get(numero=line["accountNumber"], owner=user)
+                except Account.DoesNotExist:
+                    raise serializers.ValidationError({"account": f"Account {line.get('accountNumber')} not found for this user."})
+            else:
+                account = Account.objects.get(numero=line["accountNumber"])
 
             tLine = TransactionLine(
                 journal_entry=journal_entry,
@@ -44,7 +55,7 @@ def create_journal_entry(validated_data):
 
     return journal_entry
 
-def update_journal_entry(instance, validated_data):
+def update_journal_entry(instance, validated_data, user=None):
 
     lines = validated_data.pop('lines')
 
@@ -53,6 +64,7 @@ def update_journal_entry(instance, validated_data):
 
     if check_balance(lines) is not True:
         raise serializers.ValidationError("Les transactions ne sont pas en équilibre: debit != credit")
+
 
     with transaction.atomic():
 
@@ -66,7 +78,13 @@ def update_journal_entry(instance, validated_data):
         
         for idx, line in enumerate(lines):
 
-            account = Account.objects.get(numero=line["accountNumber"])
+            if user is not None:
+                try:
+                    account = Account.objects.get(numero=line["accountNumber"], owner=user)
+                except Account.DoesNotExist:
+                    raise serializers.ValidationError({"account": f"Account {line.get('accountNumber')} not found for this user."})
+            else:
+                account = Account.objects.get(numero=line["accountNumber"])
 
             tLine = TransactionLine(
                 journal_entry=instance,

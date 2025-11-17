@@ -14,8 +14,13 @@ def account_list(request, pk=None):
 	GET : Liste tous les comptes
 	POST : Crée un nouveau compte
 	"""
+
+	# Require authentication for all accounting endpoints to ensure per-user isolation
+	if not request.user or not request.user.is_authenticated:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
 	if request.method == 'GET':
-		accounts = Account.objects.all()
+		accounts = Account.objects.filter(owner=request.user)
 		serializer = AccountSerializer(accounts, many=True)
 		return Response(serializer.data)
 	
@@ -24,7 +29,7 @@ def account_list(request, pk=None):
 		many = isinstance(data, list)
 		serializer = AccountSerializer(data=data, many=many)
 		if serializer.is_valid():
-			serializer.save()
+			serializer.save(owner=request.user)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 	
@@ -32,7 +37,7 @@ def account_list(request, pk=None):
 		if not pk:
 			return Response({"PK": "L'ID du compte est requis pour la mise à jour partielle."}, status=status.HTTP_400_BAD_REQUEST)
 		try:
-			account = Account.objects.get(pk=pk)
+			account = Account.objects.get(pk=pk, owner=request.user)
 		except Account.DoesNotExist:
 			return Response({"Account": "Compte non trouvé."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -50,14 +55,18 @@ def entry_list(request, pk=None):
 	GET : Liste toutes les écritures
 	POST : Crée une nouvelle écriture avec ses lignes
 	"""
+
+	# Require authentication for all accounting endpoints to ensure per-user isolation
+	if not request.user or not request.user.is_authenticated:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
 	if request.method == 'GET':
-		entries = JournalEntry.objects.prefetch_related('lines').all()
+		entries = JournalEntry.objects.filter(owner=request.user).prefetch_related('lines')
 		serializer = JournalEntrySerializer(entries, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 	
 	elif request.method == 'POST':
 		data = parse_data(request.data)
-		serializer = JournalEntrySerializer(data=data)
+		serializer = JournalEntrySerializer(data=data, context={'request': request})
 		if serializer.is_valid():
 			serializer.save()
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -68,13 +77,13 @@ def entry_list(request, pk=None):
 			return Response({"PK": "L'ID de l'écriture est requis pour la mise à jour."}, status=status.HTTP_400_BAD_REQUEST)
 		
 		try:
-			entry = JournalEntry.objects.get(pk=pk)
+			entry = JournalEntry.objects.get(pk=pk, owner=request.user)
 		except JournalEntry.DoesNotExist:
 			return Response({"Journal": "Écriture non trouvée."}, status=status.HTTP_404_NOT_FOUND)
 		
 		data = parse_data(request.data)
 		
-		serializer = JournalEntrySerializer(entry, data=data)
+		serializer = JournalEntrySerializer(entry, data=data, context={'request': request})
 		if serializer.is_valid():
 			serializer.save()
 			return Response(serializer.data, status=status.HTTP_200_OK)
@@ -86,7 +95,7 @@ def entry_list(request, pk=None):
 			return Response({"PK": "L'ID de l'écriture est requis pour la suppression."}, status=status.HTTP_400_BAD_REQUEST)
 		
 		try:
-			entry = JournalEntry.objects.prefetch_related('lines').get(pk=pk)
+			entry = JournalEntry.objects.prefetch_related('lines').get(pk=pk, owner=request.user)
 		except JournalEntry.DoesNotExist:
 			return Response({"Journal": "Écriture non trouvée."}, status=status.HTTP_404_NOT_FOUND)
 		
