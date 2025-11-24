@@ -6,8 +6,13 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 
 from .utils import parse_data
+from .utils_excel import read_excel_file
 from .models import Account, JournalEntry
 from .serializers import AccountSerializer, JournalEntrySerializer, AccountSoldeSerializer
+from .serializers import ExcelImportSerializer
+from .serializers import BulkImportSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 
 # Vue API pour lister et créer des comptes
 @api_view(['GET', 'POST', 'PUT'])
@@ -182,3 +187,64 @@ def import_pcg(request, pk):
 			created_count = len(created)
 
 	return Response({'created': created_count}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@api_view(['POST'])
+def import_entries_excel(request):
+	"""Endpoint: POST /entries/import-excel/
+	Accepts multipart/form-data with field 'file' (xlsx)."""
+	# Permission: same as entry_list POST (comptable or admin-comptable)
+	if not request.user or not request.user.is_authenticated:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+	if getattr(request.user, 'role', None) not in ('comptable', 'admin-comptable'):
+		return Response({'detail': 'You do not have permission to import entries.'}, status=status.HTTP_403_FORBIDDEN)
+
+	# file must be present
+	upload = request.FILES.get('file')
+	if not upload:
+		return Response({'detail': 'Missing file field (multipart/form-data expected with field name "file").'}, status=status.HTTP_400_BAD_REQUEST)
+
+	# parse
+	try:
+		rows = read_excel_file(upload)
+	except Exception as e:
+		return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+	# validate via serializers
+	serializer = ExcelImportSerializer(data={'lines': rows}, context={'request': request})
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+	result = serializer.save()
+	return Response({'created_entries': result.get('created_entries')}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def import_entries_bulk(request):
+	"""Endpoint: POST /entries/bulk-import/
+	Accepts JSON body with { entries: [ ... ] } and creates JournalEntry + TransactionLine.
+	"""
+	# Auth + role check
+	if not request.user or not request.user.is_authenticated:
+		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+	if getattr(request.user, 'role', None) not in ('comptable', 'admin-comptable'):
+		return Response({'detail': 'You do not have permission to import entries.'}, status=status.HTTP_403_FORBIDDEN)
+
+	serializer = BulkImportSerializer(data=request.data, context={'request': request})
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+	try:
+		result = serializer.save()
+	except Exception as e:
+		# if duplicate detected, return 409
+		msg = str(e)
+		if 'Duplicate entry' in msg:
+			return Response({'detail': msg}, status=status.HTTP_409_CONFLICT)
+		return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+	# serialize created entries for response
+	entries = result.get('entries', [])
+	out = JournalEntrySerializer(entries, many=True)
+	return Response({'created': result.get('created_count', 0), 'entries': out.data}, status=status.HTTP_201_CREATED)
