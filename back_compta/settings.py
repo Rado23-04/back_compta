@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+#import os
+#from dotenv import load_dotenv
+#load_dotenv()
+GEMINI_API_KEY="AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo"
+#GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +30,7 @@ SECRET_KEY = 'django-insecure-3$@if-v2z53%n$-^o7yn@(+p-y78kei8mi!-*zsm2!m(0ae@jo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -45,8 +50,12 @@ INSTALLED_APPS = [
     'corsheaders',
     # App comptable personnalisée
     'accounting',
+<<<<<<< HEAD
     # App utilisateurs pour l'auth
     'users'
+=======
+    'chatbot',
+>>>>>>> origin/Berthin
 ]
 
 MIDDLEWARE = [
@@ -91,7 +100,7 @@ DATABASES = {
         'USER': 'postgres',    # À adapter selon votre config
         'PASSWORD': 'radodora',# À adapter selon votre config
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '5433',
     }
 }
 
@@ -144,6 +153,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+<<<<<<< HEAD
 
 # Use a custom user model
 AUTH_USER_MODEL = 'users.User'
@@ -185,3 +195,6 @@ CORS_ALLOWED_ORIGINS = [
 # Note: in dev you may prefer CORS_ALLOW_ALL_ORIGINS = True, but that
 # doesn't allow credentials to be sent by browsers. Use the explicit
 # whitelist above when using cookies for auth.
+=======
+#GOOGLE_API_KEY = 'AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo'
+>>>>>>> origin/Berthin
