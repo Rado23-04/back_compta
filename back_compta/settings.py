@@ -14,7 +14,7 @@ from pathlib import Path
 #import os
 #from dotenv import load_dotenv
 #load_dotenv()
-GEMINI_API_KEY="AIzaSyAn7HtcH30Lf0uVgxJVB2B2a74USfkI9Jo"
+GEMINI_API_KEY="AIzaSyBB77XgINIlBwG6aF6xdEoiMEALHZLiDcw"
 #GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
