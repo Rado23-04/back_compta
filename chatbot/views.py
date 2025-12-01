@@ -5,6 +5,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated,AllowAny
 import json
 import re
 from datetime import datetime, timedelta
@@ -737,8 +739,8 @@ class FinancialAnalyzer:
 # Le reste du code AccountingChatBotView reste inchangé...
 
 
-class AccountingChatBotView(View):
-       
+class AccountingChatBotView(APIView):
+    permission_classes=[AllowAny]
     def __init__(self):
         super().__init__()
         self.model = None
@@ -931,7 +933,7 @@ class AccountingChatBotView(View):
             'INCOME_STATEMENT': self._handle_income_statement,
             'GENERIC': self._handle_generic
         }
-        
+        print(intent)
         handler = response_handlers.get(intent, self._handle_generic)
         return handler(user_question, sql_data, sql_query)
 
@@ -1343,6 +1345,9 @@ class AccountingChatBotView(View):
 
             Fournis une réponse PRÉCISE, UTILE et CONVERSATIONNELLE. Réponds exactement à ce qui est demandé.
 
+            Base tes réponses uniquement sur les données disponibles ou calculables et n'invente jamais d'informations.
+            Si une information n’existe pas dans la base ou ne peut pas être déterminée, dis-le clairement.
+            
             Ta réponse:
             """
             
@@ -1525,11 +1530,6 @@ class AccountingChatBotView(View):
             return None, error_msg
 
     # ==================== MÉTHODE PRINCIPALE MISE À JOUR ====================
-
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -1571,6 +1571,7 @@ class AccountingChatBotView(View):
             # ✅ Enregistrement du message utilisateur
             try:
                 user_message = ChatMessage.objects.create(
+                    # user=request.user,
                     conversation=conversation,
                     message_type='USER',
                     content=user_question
@@ -1620,6 +1621,7 @@ class AccountingChatBotView(View):
             # ✅ ENREGISTREMENT ROBUSTE DE LA RÉPONSE DU BOT
             try:
                 bot_message = ChatMessage.objects.create(
+                    # user=request.user,
                     conversation=conversation,
                     message_type='BOT',
                     content=bot_response,
@@ -1675,20 +1677,16 @@ class GeminiStatusView(View):
             'message': 'Système comptable IA opérationnel'
         })
 
-class ChatHistoryView(View):
+class ChatHistoryView(APIView):
     """Vue pour récupérer l'historique des conversations"""
-    
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
+    permission_classes=[IsAuthenticated]
     def get(self, request, session_id):
         try:
-            print(f"📖 Chargement historique pour session: {session_id}")
-            
+            user=request.user
+            print(f"📖 Chargement historique pour session: {session_id} pour l'utilisateur {user.email}")
             # Vérifier si la conversation existe
             try:
-                conversation = ChatConversation.objects.get(session_id=session_id)
+                conversation = ChatConversation.objects.get(user=user,session_id=session_id)
                 messages = conversation.messages.all().order_by('timestamp')
                 
                 history = []
@@ -1762,9 +1760,9 @@ class ChatHistoryView(View):
         except Exception as e:
             return JsonResponse({'error': f'Erreur chargement historique: {str(e)}'}, status=500)
 
-class AccountingSummaryView(View):
+class AccountingSummaryView(APIView):
     """Endpoint pour des résumés comptables prédéfinis"""
-    
+    permission_classes=[IsAuthenticated]
     def get(self, request):
         try:
             with connection.cursor() as cursor:
@@ -1791,17 +1789,15 @@ class AccountingSummaryView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-class ConversationListView(View):
+class ConversationListView(APIView):
     """Vue pour lister toutes les conversations"""
-    
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
+    permission_classes=[IsAuthenticated]
     def get(self, request):
         try:
+            user=request.user
             # Ne lister que les conversations qui ont au moins un message
             conversations = ChatConversation.objects.filter(
+                user=user,
                 messages__isnull=False
             ).distinct().order_by('-updated_at')[:20]
             
@@ -1859,62 +1855,16 @@ class ConversationListView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-class CreateConversationView(View):
+class CreateConversationView(APIView):
     """Vue pour créer une nouvelle conversation"""
-    
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
+    permission_classes=[IsAuthenticated]
     def post(self, request):
         try:
             data = json.loads(request.body)
             session_id = data.get('session_id', f"session_{datetime.now().timestamp()}")
             title = data.get('title', 'Nouvelle conversation')
             
-            # Vérifier si la conversation existe déjà
-            try:
-                existing_conversation = ChatConversation.objects.get(session_id=session_id)
-                return JsonResponse({
-                    'success': True,
-                    'session_id': existing_conversation.session_id,
-                    'conversation_id': existing_conversation.id,
-                    'title': existing_conversation.title,
-                    'created': False,
-                    'message': 'Conversation existe déjà'
-                })
-            except ChatConversation.DoesNotExist:
-                # Créer une nouvelle conversation seulement si elle n'existe pas
-                user, created = User.objects.get_or_create(email='chatbot_user')
-                conversation = ChatConversation.objects.create(
-                    session_id=session_id,
-                    user=user,
-                    title=title
-                )
-                
-                return JsonResponse({
-                    'success': True,
-                    'session_id': conversation.session_id,
-                    'conversation_id': conversation.id,
-                    'title': conversation.title,
-                    'created': True
-                })
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    """Vue pour créer une nouvelle conversation"""
-    
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-            session_id = data.get('session_id', f"session_{datetime.now().timestamp()}")
-            title = data.get('title', 'Nouvelle conversation')
-            
-            user, created = User.objects.get_or_create(email='chatbot_user')
+            user=request.user
             conversation, created = ChatConversation.objects.get_or_create(
                 session_id=session_id,
                 defaults={
@@ -1934,17 +1884,15 @@ class CreateConversationView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
         
-class CleanEmptyConversationsView(View):
+class CleanEmptyConversationsView(APIView):
+    permission_classes=[IsAuthenticated]
     """Vue pour nettoyer les conversations sans messages"""
-    
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-    
     def post(self, request):
         try:
+            user=request.user
+
             # Supprimer les conversations sans messages
-            empty_conversations = ChatConversation.objects.filter(messages__isnull=True)
+            empty_conversations = ChatConversation.objects.filter(user=user,messages__isnull=True)
             count = empty_conversations.count()
             empty_conversations.delete()
             

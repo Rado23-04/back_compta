@@ -45,7 +45,7 @@ class ChatMessage(models.Model):
         ('BOT', 'Message bot'),
         ('SYSTEM', 'Message système'),
     ]
-    
+    user=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     conversation = models.ForeignKey(
         ChatConversation, 
         on_delete=models.CASCADE, 

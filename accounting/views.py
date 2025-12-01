@@ -4,6 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.conf import settings
+
+from users.models import User
 
 from .utils import parse_data
 from .utils_excel import read_excel_file
@@ -138,18 +141,16 @@ def import_pcg(request, pk):
 		return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 	# Find target account and owner
-	target = get_object_or_404(Account, pk=pk)
-	owner = target.owner
+	owner = get_object_or_404(User, pk=pk)
+	
 	# If the target has no owner, assign the importing user as owner.
 	# If the target has an owner different from the requester, only allow admins to import.
 	if owner is None:
 		owner = request.user
-		# persist the owner on the target account to keep ownership consistent
-		target.owner = owner
-		target.save()
+
 	elif owner != request.user and getattr(request.user, 'role', None) != 'admin-comptable':
 		return Response({'detail': 'You do not have permission to import into this account.'}, status=status.HTTP_403_FORBIDDEN)
-
+	
 	data = request.data
 	if not data:
 		return Response({'detail': 'Please provide PCG JSON array in request body.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -167,8 +168,7 @@ def import_pcg(request, pk):
 		numero = item.get('numero')
 		if not numero:
 			continue
-		if numero in existing:
-			continue
+
 		acct = Account(
 			owner=owner,
 			numero=numero,
